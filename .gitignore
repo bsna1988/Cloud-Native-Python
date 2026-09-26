@@ -1,0 +1,4 @@
+.venv
+.postman
+.DS_Store
+__pycache__

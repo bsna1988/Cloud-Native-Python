@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{host}}/api/v1/books/1"
+method: PUT
+body:
+  type: json
+  content: |-
+    {
+        "thumbnail": "https://upload.wikimedia.org/wikipedia/commons/7/7a/The_Great_Gatsby_Cover_1925_Retouched.jpg?utm_source=en.wikipedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled"
+    }
+order: 2199715277546278

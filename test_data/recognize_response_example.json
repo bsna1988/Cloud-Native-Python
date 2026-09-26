@@ -1,0 +1,11 @@
+{
+    "book": {
+        "author": "Unknown author",
+        "description": "Detected from uploaded image using OCR.",
+        "image_path": "/Users/sasha/Cloud-Native-Python/uploads/6a583bda4a7d42368c25bf94048d6af4_happiness.png",
+        "raw_text": "practical guide for improving your health happiness and abundance Naturally!\nTHE\nHaPpinEss EFFEcT\ncREAting HapPinESS In An UnhAppy WRL D\nS T E P H E N T. R A D E NT Z",
+        "release_date": "",
+        "title": "practical guide for improving your health happiness and abundance Naturally! THE HaPpinEss EFFEcT cREAting HapPinESS In An UnhAppy WRL D S T E P H E N T. R A D E NT Z"
+    },
+    "status": "recognized"
+}

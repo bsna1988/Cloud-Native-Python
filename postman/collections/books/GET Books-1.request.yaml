@@ -1,0 +1,5 @@
+$kind: http-request
+name: GET Books
+url: "{{host}}/api/v1/books"
+method: GET
+order: 1419062189122238

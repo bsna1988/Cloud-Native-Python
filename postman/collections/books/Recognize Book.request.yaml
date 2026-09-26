@@ -1,0 +1,4 @@
+$kind: http-request
+url: "{{host}}/api/v1/books/recognize"
+method: POST
+order: 2175247904064633

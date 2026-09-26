@@ -1,0 +1,7 @@
+$kind: http-request
+description: ""
+url: https://openlibrary.org/search.json?title=The%20Great%20Gatsby
+method: GET
+queryParams:
+  title: The%20Great%20Gatsby
+order: 2320382487836945

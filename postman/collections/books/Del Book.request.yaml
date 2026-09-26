@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{host}}/api/v1/books"
+method: DELETE
+queryParams:
+  - key: title
+    value: Test
+    disabled: true
+    description: ""
+  - key: author
+    value: Test
+    disabled: true
+    description: ""
+body:
+  type: json
+  content: |-
+    {
+        "author": "Test",
+        "title": "Test"
+    }
+order: 1789808891904

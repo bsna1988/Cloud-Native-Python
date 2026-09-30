@@ -7,6 +7,8 @@ import uuid
 import requests
 import spacy
 import re
+from flask_cors import CORS, cross_origin
+
 
 try:
     import easyocr
@@ -244,7 +246,8 @@ def create_book():
         'description': request.json.get('description')
     }
     book_id = add_book(book)
-    return list_book(book_id), 201
+    (response, status) =  list_book(book_id)
+    return response, 201
 
 @app.route('/api/v1/books', methods=['DELETE'])
 def delete_book():
@@ -310,6 +313,8 @@ def update_book_in_db(book_id, book):
             abort(404)
     finally:
         conn.close()
+
+CORS(app)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5005, debug=True)

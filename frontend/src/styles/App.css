@@ -39,3 +39,33 @@
   gap: 16px;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
+
+.app-header {
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 24px;
+}
+
+.main-nav {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+}
+
+.main-nav a {
+  text-decoration: none;
+  color: #222;
+  font-weight: 600;
+}
+
+.page-actions {
+  margin: 16px 0;
+}
+
+.primary-btn {
+  display: inline-block;
+  background-color: #111827;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 8px;
+  text-decoration: none;
+}

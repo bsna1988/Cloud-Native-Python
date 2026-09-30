@@ -230,7 +230,7 @@ def recognize_book():
         if image.filename == '':
             abort(400)
         recognition = recognize_book_from_image(image)
-        return jsonify({'status': 'recognized', 'book': recognition}), 200
+        return jsonify({'status': 'recognized', 'books': recognition}), 200
 
     abort(400)
 

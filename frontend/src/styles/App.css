@@ -69,3 +69,31 @@
   border-radius: 8px;
   text-decoration: none;
 }
+
+.book-form {
+  display: grid;
+  gap: 16px;
+  max-width: 520px;
+}
+
+.book-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.book-form input,
+.book-form textarea {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #bbb;
+  font: inherit;
+}
+
+.book-form button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  background-color: #111827;
+  color: white;
+  cursor: pointer;
+}

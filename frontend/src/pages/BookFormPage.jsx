@@ -32,17 +32,20 @@ export default function BookFormPage() {
 		setError(null);
 
 		try {
+
+			const formData = new FormData();
+			formData.append('book', JSON.stringify(form));
+			for (const file of files) {
+				formData.append('images', file);
+			}
 			const response = await fetch('/api/v1/books', {
 				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify(form),
+				body: formData,
 			});
 
 			if (!response.ok) {
 				throw new Error('Failed to create book');
-			}
+			} 
 
 			const data = await response.json();
 			navigate(`/books/${data.book.id}`);
@@ -70,19 +73,23 @@ export default function BookFormPage() {
 					method: 'POST',
 					body: formData,
 				});
-				if (!response.ok) return
+				if (!response.ok) {
+					throw new Error('Failed to recognize image');
+				}
 
-				const candidates = await response.json();
-				console.log(candidates)
-				const best = candidates.books[0] || null
+				const data = await response.json();
+				console.log(data)
+				const best = data.books?.[0] || null
 				if (best) {
 					setForm((current) => ({
 						...current,
-						title: best.title || '',
-						author: best.author || '',
-						release_date: best.release_date || '',
-						description: best.description || '',
+						title: best.title || current.title,
+						author: best.author || current.author,
+						release_date: best.release_date || current.release_date,
+						description: best.description || current.description,
 					}))
+				} else {
+					throw new Error('No book recognized from the image');
 				}
 			} catch (err) {
 				setError(err.message);
@@ -124,7 +131,7 @@ export default function BookFormPage() {
 			<label>
 				<span>Release Date</span>
 				<input
-					type="date"
+					type="text"
 					name="release_date"
 					value={form.release_date}
 					onChange={handleChange}

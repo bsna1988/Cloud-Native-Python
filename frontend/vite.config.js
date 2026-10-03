@@ -8,8 +8,12 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:5005',
         changeOrigin: true,
-      }
-    }
-  },
-  plugins: [react()],
+      },
+      '/uploads': {
+        target: 'http://localhost:5005',
+        changeOrigin: true,
+      },
+    },
+    plugins: [react()],
+  }
 })

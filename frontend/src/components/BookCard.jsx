@@ -4,7 +4,7 @@ function BookCard({ book }) {
     return (
         <article className="book-card">
             {book.thumbnail && (
-                <img src={book.thumbnail} alt={`${book.title} cover`}/>
+                <img className="book-card__image" src={book.thumbnail} alt={`${book.title} cover`}/>
             )}
             <div className="book-details">
                 <h2>

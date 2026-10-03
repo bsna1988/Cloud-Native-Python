@@ -18,13 +18,20 @@
   }
 }
 
+.app-shell {
+  width: 100%;
+  max-width: 960px;
+  box-sizing:border-box;
+  margin-inline: auto;
+  padding-inline: 24px;
+  text-align: left;
+}
+
 .book-search {
   display: grid;
   gap: 6px;
   max-width: 420px;
   margin-block: 16px;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 .book-search input {
@@ -96,4 +103,12 @@
   background-color: #111827;
   color: white;
   cursor: pointer;
+}
+
+.book-card__image {
+  display: block;
+  width: 160px;
+  max-width: 160px;
+  height: 220px;
+  object-fit: contain;
 }

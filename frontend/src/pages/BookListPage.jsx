@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom'
 import BookCard from "../components/BookCard";
+import { loadBooks } from "../features/books/booksSlice";
 
 function BookListPage() {
-    const [books, setBooks] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const dispatch = useDispatch()
+    const books = useSelector((state) => state.books.items)
+    const status = useSelector((state) => state.books.status)
+    const error = useSelector((state) => state.books.error)
     const [query, setQuery] = useState('')
 
     const normalizedQuery = query.trim().toLowerCase()
@@ -16,27 +19,26 @@ function BookListPage() {
     })
 
     useEffect(() => {
-        async function loadBooks() {
-            try {
-                const response = await fetch('/api/v1/books')
+        dispatch(loadBooks())
+    }, [dispatch])
 
-                if (!response.ok) {
-                    throw new Error('Failed to load books')
-                }
 
-                const data = await response.json()
-                setBooks(data.books)
-            } catch (err) {
-                setError(err.message)
-            } finally {
-                setLoading(false)
-            }
-        }
-        loadBooks()
-    }, [])
+    if (status === 'loading' || status === 'idle') {
+        return <p>Loading books...</p>;
+    }
 
-    if (loading) return <p>Loading books...</p>
-    if (error) return <p>Error: {error}</p>
+    if (status === 'failed') {
+        return (
+            <>
+                <p>Error: {error}</p>
+                <button type="button" onClick={() => dispatch(loadBooks())}>
+                    Retry
+                </button>
+            </>
+        );
+    }
+
+
     return (
         <>
             <h1>My Library</h1>

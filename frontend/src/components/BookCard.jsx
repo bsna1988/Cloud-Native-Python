@@ -10,7 +10,7 @@ function BookCard({ book }) {
                 <h2>
                     <Link to={`/books/${book.id}`}>{book.title}</Link>
                 </h2>
-                <p>by {book.author_name}</p>
+                <p>by {book.author}</p>
                 <small>{book.release_date}</small>
             </div>
         </article>

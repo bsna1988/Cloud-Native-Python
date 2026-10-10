@@ -36,7 +36,7 @@ def recognize_image(uploaded_file):
             raise ValueError("OCR could not extract text from the image")
 
         title = extract_best_title_from_ocr(results)
-        authors = extract_author_names_from_ocr(results)
+        authors = extract_s_from_ocr(results)
         author = " ".join(authors)
 
         try:
@@ -143,7 +143,7 @@ def doc_to_book(document):
     """Convert one OpenLibrary search result into this app's book shape."""
     return {
         "title": document.get("title", ""),
-        "author": ", ".join(document.get("author_name", [])),
+        "author": ", ".join(document.get("author", [])),
         "release_date": str(document.get("first_publish_year", "")),
         "publisher": document.get("publisher", [""])[0],
         "description": "",

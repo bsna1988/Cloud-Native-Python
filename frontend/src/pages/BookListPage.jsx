@@ -11,7 +11,7 @@ function BookListPage() {
     const normalizedQuery = query.trim().toLowerCase()
 
     const visibleBooks = books.filter((book) => {
-        const searchableText = `${book.author_name} ${book.title}`.toLowerCase()
+        const searchableText = `${book.author} ${book.title}`.toLowerCase()
         return searchableText.includes(normalizedQuery)
     })
 

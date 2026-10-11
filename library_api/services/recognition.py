@@ -15,8 +15,141 @@ except ImportError:  # EasyOCR may be unavailable in some environments.
     easyocr = None
 
 
+class RecognitionStrategy:
+    name = "base"
+    is_primary = False
+
+    def recognize(self, uploaded_files, temp_paths):
+        raise NotImplementedError
+
+
+class BarcodeRecognitionStrategy(RecognitionStrategy):
+    name = "barcode"
+    is_primary = True
+
+    def recognize(self, uploaded_files, temp_paths):
+        isbn = None
+        for temp_path in temp_paths:
+            file_isbn = read_isbn_from_barcode(temp_path)
+            if file_isbn:
+                isbn = file_isbn
+                break
+
+        if not isbn:
+            return None
+
+        try:
+            metadata = query_book_metadata(isbn=isbn)
+            if metadata:
+                for book in metadata:
+                    book["barcode"] = isbn
+                return metadata
+        except requests.RequestException:
+            current_app.logger.exception("OpenLibrary ISBN lookup failed for detected ISBN")
+
+        return [{"title": "", "author": "", "barcode": isbn}]
+
+
+class CoverOcrRecognitionStrategy(RecognitionStrategy):
+    name = "cover_ocr"
+    is_primary = False
+
+    def recognize(self, uploaded_files, temp_paths):
+        if not easyocr:
+            return None
+
+        cover_image_path = None
+        for temp_path in temp_paths:
+            if not read_isbn_from_barcode(temp_path):
+                cover_image_path = temp_path
+                break
+
+        if not cover_image_path:
+            return None
+
+        try:
+            ocr_results = read_text_from_image(cover_image_path)
+        except Exception:
+            return None
+
+        if not ocr_results:
+            return None
+
+        ocr_title = extract_best_title_from_ocr(ocr_results)
+        ocr_authors = extract_author_names_from_ocr(ocr_results)
+        ocr_author = " ".join(ocr_authors)
+
+        if not ocr_title and not ocr_author:
+            return None
+
+        try:
+            metadata = query_book_metadata(ocr_title, author=ocr_author)
+            if metadata:
+                return metadata
+        except requests.RequestException:
+            pass
+
+        return [{"title": ocr_title, "author": ocr_author, "barcode": ""}]
+
+
+class RecognitionPipeline:
+    def __init__(self):
+        self.strategies = [
+            BarcodeRecognitionStrategy(),
+            CoverOcrRecognitionStrategy(),
+        ]
+
+    def register_strategy(self, strategy: RecognitionStrategy):
+        self.strategies.append(strategy)
+
+    def recognize(self, uploaded_files, temp_paths):
+        primary_results = None
+
+        # Run primary strategies first (authoritative)
+        for strategy in self.strategies:
+            if strategy.is_primary:
+                try:
+                    result = strategy.recognize(uploaded_files, temp_paths)
+                    if result:
+                        primary_results = result
+                        break
+                except Exception:
+                    current_app.logger.exception(f"Primary recognition strategy '{strategy.name}' failed")
+
+        # Run secondary strategies (to fill gaps)
+        secondary_results = None
+        for strategy in self.strategies:
+            if not strategy.is_primary:
+                try:
+                    result = strategy.recognize(uploaded_files, temp_paths)
+                    if result:
+                        secondary_results = result
+                        break
+                except Exception:
+                    current_app.logger.exception(f"Secondary recognition strategy '{strategy.name}' failed")
+
+        if primary_results:
+            if secondary_results and len(secondary_results) > 0:
+                sec_book = secondary_results[0]
+                for book in primary_results:
+                    if not book.get("title") and sec_book.get("title"):
+                        book["title"] = sec_book["title"]
+                    if not book.get("author") and sec_book.get("author"):
+                        book["author"] = sec_book["author"]
+                    if not book.get("release_date") and sec_book.get("release_date"):
+                        book["release_date"] = sec_book["release_date"]
+            return primary_results
+
+        if secondary_results:
+            return secondary_results
+
+        if easyocr is None:
+            raise ValueError("OCR is unavailable because EasyOCR is not installed")
+        raise ValueError("Could not recognize book from images")
+
+
 def recognize_image(uploaded_files):
-    """Return book metadata candidates recognized from uploaded book images."""
+    """Return book metadata candidates recognized from uploaded book images using pluggable strategies."""
     if not isinstance(uploaded_files, (list, tuple)):
         uploaded_files = [uploaded_files]
     if not uploaded_files:
@@ -26,8 +159,6 @@ def recognize_image(uploaded_files):
     temp_paths = []
 
     try:
-        isbn = None
-        all_ocr_results = []
         for uploaded_file in uploaded_files:
             suffix = Path(uploaded_file.filename or "").suffix or ".jpg"
             with tempfile.NamedTemporaryFile(
@@ -48,56 +179,8 @@ def recognize_image(uploaded_files):
             except Exception:
                 pass
 
-            isbn = isbn or read_isbn_from_barcode(temp_path)
-            results = read_text_from_image(temp_path) if easyocr else []
-            all_ocr_results.extend(results)
-            if not isbn:
-                isbn = extract_isbn_from_ocr(results)
-
-        openlibrary_metadata = None
-        if isbn:
-            try:
-                openlibrary_metadata = query_book_metadata(isbn=isbn)
-            except requests.RequestException:
-                current_app.logger.exception(
-                    "OpenLibrary ISBN lookup failed for detected ISBN"
-                )
-
-        ocr_title = extract_best_title_from_ocr(all_ocr_results) if all_ocr_results else ""
-        ocr_authors = extract_author_names_from_ocr(all_ocr_results) if all_ocr_results else []
-        ocr_author = " ".join(ocr_authors)
-
-        if openlibrary_metadata:
-            for book in openlibrary_metadata:
-                book["barcode"] = isbn
-                if not book.get("title") and ocr_title:
-                    book["title"] = ocr_title
-                if not book.get("author") and ocr_author:
-                    book["author"] = ocr_author
-            return openlibrary_metadata
-
-        if not all_ocr_results:
-            if isbn:
-                return [{"title": "", "author": "", "barcode": isbn}]
-            if easyocr is None:
-                raise ValueError("OCR is unavailable because EasyOCR is not installed")
-            raise ValueError("OCR could not extract text from the images")
-
-        title = ocr_title
-        author = ocr_author
-
-        try:
-            metadata = query_book_metadata(title, author=author)
-        except requests.RequestException:
-            metadata = None
-
-        if metadata:
-            if isbn:
-                for book in metadata:
-                    book["barcode"] = isbn
-            return metadata
-
-        return [{"title": title, "author": ", ".join(ocr_authors), "barcode": isbn}]
+        pipeline = RecognitionPipeline()
+        return pipeline.recognize(uploaded_files, temp_paths)
 
     finally:
         for temp_path in temp_paths:

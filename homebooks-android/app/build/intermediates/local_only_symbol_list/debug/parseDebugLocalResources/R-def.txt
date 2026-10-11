@@ -3,3 +3,4 @@ local
 drawable ic_book_placeholder
 string app_name
 style Theme.HomeBooks
+xml file_paths

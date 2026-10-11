@@ -1,6 +1,5 @@
 package com.homebooks.android.ui.screens
 
-import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
@@ -18,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import com.homebooks.android.data.model.RecognizedBook
 import com.homebooks.android.ui.viewmodel.BooksViewModel
@@ -41,7 +41,11 @@ fun AddBookScreen(
     var selectedFiles by remember { mutableStateOf<List<File>>(emptyList()) }
     var selectedModels by remember { mutableStateOf<List<Any>>(emptyList()) }
 
+    var cameraFile by remember { mutableStateOf<File?>(null) }
+
     val recognitionState by viewModel.recognitionState.observeAsState(UiState.Idle)
+    val errorMessage by viewModel.error.observeAsState(null)
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
@@ -70,18 +74,13 @@ fun AddBookScreen(
     }
 
     val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview()
-    ) { bitmap ->
-        if (bitmap != null) {
-            val file = File(context.cacheDir, "book_cam_${System.currentTimeMillis()}.jpg")
-            try {
-                file.outputStream().use { out ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
-                }
-                selectedFiles = selectedFiles + file
-                selectedModels = selectedModels + bitmap
-                viewModel.recognizeImages(selectedFiles)
-            } catch (_: Exception) {}
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && cameraFile != null) {
+            val file = cameraFile!!
+            selectedFiles = selectedFiles + file
+            selectedModels = selectedModels + file
+            viewModel.recognizeImages(selectedFiles)
         }
     }
 
@@ -103,12 +102,30 @@ fun AddBookScreen(
         }
     }
 
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { msg ->
+            snackbarHostState.showSnackbar(msg)
+            viewModel.clearError()
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Add Book") },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = {
+                        title = ""
+                        author = ""
+                        barcode = ""
+                        releaseDate = ""
+                        description = ""
+                        selectedFiles = emptyList()
+                        selectedModels = emptyList()
+                        viewModel.clearRecognitionState()
+                        onBackClick()
+                    }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -141,7 +158,16 @@ fun AddBookScreen(
                 }
 
                 OutlinedButton(
-                    onClick = { cameraLauncher.launch(null) },
+                    onClick = {
+                        val file = File(context.cacheDir, "book_cam_${System.currentTimeMillis()}.jpg")
+                        cameraFile = file
+                        val uri = FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.fileprovider",
+                            file
+                        )
+                        cameraLauncher.launch(uri)
+                    },
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
@@ -247,8 +273,9 @@ fun AddBookScreen(
                                 releaseDate = releaseDate,
                                 description = description,
                                 imageFiles = selectedFiles
-                            )
-                            onBookAdded()
+                            ) {
+                                onBookAdded()
+                            }
                         }
                     },
                     modifier = Modifier.weight(2f),

@@ -30,6 +30,16 @@
         android:testOnly="true"
         android:theme="@style/Theme.HomeBooks"
         android:usesCleartextTraffic="true" >
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.homebooks.android.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true" >
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <activity
             android:name="com.homebooks.android.MainActivity"
             android:exported="true"

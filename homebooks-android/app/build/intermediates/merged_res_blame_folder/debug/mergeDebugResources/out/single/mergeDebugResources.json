@@ -1,6 +1,10 @@
 [
     {
-        "merged": "com.homebooks.android.app-debug-67:/drawable_ic_book_placeholder.xml.flat",
-        "source": "com.homebooks.android.app-main-69:/drawable/ic_book_placeholder.xml"
+        "merged": "/Users/sasha/.gradle/daemon/9.6.0/com.homebooks.android.app-debug-67:/drawable_ic_book_placeholder.xml.flat",
+        "source": "/Users/sasha/.gradle/daemon/9.6.0/com.homebooks.android.app-main-69:/drawable/ic_book_placeholder.xml"
+    },
+    {
+        "merged": "com.homebooks.android.app-debug-67:/xml_file_paths.xml.flat",
+        "source": "com.homebooks.android.app-main-69:/xml/file_paths.xml"
     }
 ]

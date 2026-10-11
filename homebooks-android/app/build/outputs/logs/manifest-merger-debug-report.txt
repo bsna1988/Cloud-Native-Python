@@ -1,9 +1,20 @@
 -- Merging decision tree log ---
+provider#androidx.core.content.FileProvider
+INJECTED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:14:9-22:20
+	android:grantUriPermissions
+		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:18:13-47
+	android:authorities
+		INJECTED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml
+		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:16:13-64
+	android:exported
+		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:17:13-37
+	android:name
+		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:15:13-62
 manifest
-ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:2:1-26:12
-INJECTED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:2:1-26:12
-INJECTED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:2:1-26:12
-INJECTED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:2:1-26:12
+ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:2:1-36:12
+INJECTED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:2:1-36:12
+INJECTED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:2:1-36:12
+INJECTED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:2:1-36:12
 MERGED from [com.google.android.material:material:1.11.0] /Users/sasha/.gradle/caches/9.6.0/transforms/cdd13975a24e3fcfd99ef27027605843/transformed/material-1.11.0/AndroidManifest.xml:17:1-24:12
 MERGED from [androidx.constraintlayout:constraintlayout:2.0.1] /Users/sasha/.gradle/caches/9.6.0/transforms/73548a8b747ed1214d42efa956a42bd2/transformed/constraintlayout-2.0.1/AndroidManifest.xml:2:1-11:12
 MERGED from [io.coil-kt:coil-compose:2.5.0] /Users/sasha/.gradle/caches/9.6.0/transforms/4eba996ff5c8907a2f3256760e141fee/transformed/coil-compose-2.5.0/AndroidManifest.xml:2:1-7:12
@@ -110,8 +121,8 @@ ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/Andro
 	android:name
 		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:6:22-73
 application
-ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:8:5-24:19
-INJECTED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:8:5-24:19
+ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:8:5-34:19
+INJECTED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:8:5-34:19
 MERGED from [com.google.android.material:material:1.11.0] /Users/sasha/.gradle/caches/9.6.0/transforms/cdd13975a24e3fcfd99ef27027605843/transformed/material-1.11.0/AndroidManifest.xml:22:5-20
 MERGED from [com.google.android.material:material:1.11.0] /Users/sasha/.gradle/caches/9.6.0/transforms/cdd13975a24e3fcfd99ef27027605843/transformed/material-1.11.0/AndroidManifest.xml:22:5-20
 MERGED from [androidx.constraintlayout:constraintlayout:2.0.1] /Users/sasha/.gradle/caches/9.6.0/transforms/73548a8b747ed1214d42efa956a42bd2/transformed/constraintlayout-2.0.1/AndroidManifest.xml:9:5-20
@@ -147,25 +158,31 @@ MERGED from [androidx.startup:startup-runtime:1.1.1] /Users/sasha/.gradle/caches
 	android:usesCleartextTraffic
 		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:13:9-44
 activity#com.homebooks.android.MainActivity
-ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:14:9-23:20
+ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:24:9-33:20
 	android:label
-		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:17:13-45
+		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:27:13-45
 	android:exported
-		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:16:13-36
+		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:26:13-36
 	android:theme
-		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:18:13-51
+		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:28:13-51
 	android:name
-		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:15:13-41
+		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:25:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:19:13-22:29
+ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:29:13-32:29
 action#android.intent.action.MAIN
-ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:20:17-69
+ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:30:17-69
 	android:name
-		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:20:25-66
+		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:30:25-66
 category#android.intent.category.LAUNCHER
-ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:21:17-77
+ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:31:17-77
 	android:name
-		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:21:27-74
+		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:31:27-74
+meta-data#android.support.FILE_PROVIDER_PATHS
+ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:19:13-21:54
+	android:resource
+		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:21:17-51
+	android:name
+		ADDED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml:20:17-67
 uses-sdk
 INJECTED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from /Users/sasha/Cloud-Native-Python/homebooks-android/app/src/main/AndroidManifest.xml

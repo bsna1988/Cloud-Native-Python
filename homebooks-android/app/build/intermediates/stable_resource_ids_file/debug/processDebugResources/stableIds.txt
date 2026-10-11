@@ -1,3 +1,4 @@
+com.homebooks.android:xml/file_paths = 0x7f110000
 com.homebooks.android:styleable/ViewStubCompat = 0x7f100099
 com.homebooks.android:styleable/ViewBackgroundHelper = 0x7f100097
 com.homebooks.android:styleable/Transition = 0x7f100094

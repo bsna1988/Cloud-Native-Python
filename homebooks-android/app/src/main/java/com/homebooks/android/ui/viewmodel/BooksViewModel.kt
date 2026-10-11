@@ -67,12 +67,14 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
         barcode: String?,
         releaseDate: String,
         description: String,
-        imageFiles: List<File>
+        imageFiles: List<File>,
+        onSuccess: () -> Unit = {}
     ) {
         viewModelScope.launch {
             val result = _repository.addBook(title, author, barcode, releaseDate, description, imageFiles)
             result.onSuccess { book ->
                 loadBooks()
+                onSuccess()
             }.onFailure { exception ->
                 _error.value = exception.message ?: "Failed to add book"
             }

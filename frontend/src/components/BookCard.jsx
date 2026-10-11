@@ -3,9 +3,11 @@ import { Link } from "react-router-dom";
 function BookCard({ book }) {
     return (
         <article className="book-card">
-            {book.thumbnail && (
-                <img className="book-card__image" src={book.thumbnail} alt={`${book.title} cover`}/>
-            )}
+            <img
+                className="book-card__image"
+                src={book.thumbnail || '/uploads/no_image.svg'}
+                alt={book.thumbnail ? `${book.title} cover` : 'No book cover available'}
+            />
             <div className="book-details">
                 <h2>
                     <Link to={`/books/${book.id}`}>{book.title}</Link>

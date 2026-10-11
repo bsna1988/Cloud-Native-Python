@@ -55,12 +55,20 @@ def add_book():
 
 @books_bp.post("/recognize")
 def recognize_book():
-    image = request.files.get("image")
-    if image is None or not image.filename:
+    images = [
+        image for image in request.files.getlist("images")
+        if image.filename
+    ]
+    if not images:
+        image = request.files.get("image")
+        if image and image.filename:
+            images = [image]
+
+    if not images:
         return jsonify({"error": "Upload an image in the 'image' field"}), 400
 
     try:
-        books = recognize_image(image)
+        books = recognize_image(images)
     except ValueError as error:
         return jsonify({"error": str(error)}), 422
 

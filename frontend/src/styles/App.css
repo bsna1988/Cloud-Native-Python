@@ -112,3 +112,31 @@
   height: 220px;
   object-fit: contain;
 }
+
+.book-detail__images {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px;
+  margin-block: 24px;
+}
+
+.book-detail__cover {
+  display: block;
+  width: min(240px, 100%);
+  height: 330px;
+  object-fit: contain;
+}
+
+.book-detail__gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.book-detail__gallery img {
+  display: block;
+  width: 120px;
+  height: 165px;
+  object-fit: contain;
+}

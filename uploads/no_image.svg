@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="440" viewBox="0 0 320 440" role="img" aria-labelledby="title description">
+  <title id="title">No book cover available</title>
+  <desc id="description">A simple illustration of a book with no cover image available.</desc>
+  <rect width="320" height="440" fill="#f1f3f5"/>
+  <rect x="64" y="86" width="192" height="246" rx="12" fill="#dbe2ea"/>
+  <path d="M160 86v246" stroke="#aab6c4" stroke-width="8"/>
+  <path d="M88 130h48M88 151h48M184 130h48M184 151h48" stroke="#aab6c4" stroke-linecap="round" stroke-width="6"/>
+  <text x="160" y="382" fill="#526170" font-family="Arial, sans-serif" font-size="19" font-weight="600" text-anchor="middle">NO COVER AVAILABLE</text>
+</svg>

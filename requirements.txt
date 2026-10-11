@@ -1,5 +1,6 @@
 Flask>=3.0
 easyocr>=1.7.0
+zxing-cpp>=2.2.0
 requests>=2.32
 spacy>=3.0
 flask-cors>=6.0.5

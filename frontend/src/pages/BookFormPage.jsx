@@ -7,6 +7,7 @@ export default function BookFormPage() {
 	const [form, setForm] = useState({
 		title: '',
 		author: '',
+		barcode: '',
 		release_date: '',
 		description: '',
 	});
@@ -61,12 +62,14 @@ export default function BookFormPage() {
 	useEffect(() => {
 		if (!files.length) return
 
-		async function recognizeImage(file) {
+		async function recognizeImage() {
 			setLoadingRecognize(true);
 			setError(null);
 
 			const formData = new FormData();
-			formData.append('image', file);
+			for (const image of files) {
+				formData.append('images', image);
+			}
 
 			try {
 				const response = await fetch('/api/v1/books/recognize', {
@@ -78,13 +81,13 @@ export default function BookFormPage() {
 				}
 
 				const data = await response.json();
-				console.log(data)
 				const best = data.books?.[0] || null
 				if (best) {
 					setForm((current) => ({
 						...current,
 						title: best.title || current.title,
 						author: best.author || current.author,
+						barcode: best.barcode || current.barcode,
 						release_date: best.release_date || current.release_date,
 						description: best.description || current.description,
 					}))
@@ -98,7 +101,7 @@ export default function BookFormPage() {
 			}
 		}
 
-		recognizeImage(files[0])
+		recognizeImage()
 	}, [files]);
 
 	return (
@@ -125,6 +128,16 @@ export default function BookFormPage() {
 					value={form.author}
 					onChange={handleChange}
 					required
+				/>
+			</label>
+
+			<label>
+				<span>ISBN</span>
+				<input
+					type="text"
+					name="barcode"
+					value={form.barcode}
+					onChange={handleChange}
 				/>
 			</label>
 

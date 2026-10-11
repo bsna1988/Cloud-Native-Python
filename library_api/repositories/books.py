@@ -20,10 +20,11 @@ def create_book(book, image_urls):
         cursor = connection.execute(
             """
             INSERT INTO book
-                (title, author, release_date, description, thumbnail)
-            VALUES (?, ?, ?, ?, ?)
+                (barcode, title, author, release_date, description, thumbnail)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
             (
+                book.get("barcode"),
                 book["title"],
                 book["author"],
                 book.get("release_date", ""),

@@ -6,10 +6,12 @@ from pathlib import Path
 
 from library_api import create_app
 from library_api.repositories.books import create_book
-from library_api.services.recognition import (
-    extract_isbn_from_ocr,
+from library_api.services.recognition_strategies.barcode import (
     normalize_isbn,
     read_isbn_from_barcode,
+)
+from library_api.services.recognition_strategies.cover_ocr import (
+    extract_isbn_from_ocr,
 )
 
 

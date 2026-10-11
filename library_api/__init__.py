@@ -15,6 +15,8 @@ def create_app(test_config=None):
         DATABASE=str(project_root / "books.db"),
         UPLOAD_FOLDER=str(project_root / "uploads"),
         MAX_CONTENT_LENGTH=16 * 1024 * 1024,
+        LM_STUDIO_BASE_URL="http://127.0.0.1:1234/v1",
+        LM_STUDIO_MODEL="google/gemma-3-4b",
     )
 
     if test_config:

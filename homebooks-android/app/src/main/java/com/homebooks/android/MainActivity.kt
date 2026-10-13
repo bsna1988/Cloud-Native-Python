@@ -16,6 +16,7 @@ import androidx.navigation.navArgument
 import com.homebooks.android.ui.screens.AddBookScreen
 import com.homebooks.android.ui.screens.BookDetailScreen
 import com.homebooks.android.ui.screens.BookListScreen
+import com.homebooks.android.ui.screens.SplashScreen
 import com.homebooks.android.ui.theme.HomeBooksTheme
 import com.homebooks.android.ui.viewmodel.BooksViewModel
 
@@ -32,7 +33,16 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     val navController = rememberNavController()
-                    NavHost(navController = navController, startDestination = "book_list") {
+                    NavHost(navController = navController, startDestination = "splash") {
+                        composable("splash") {
+                            SplashScreen(
+                                onSplashFinished = {
+                                    navController.navigate("book_list") {
+                                        popUpTo("splash") { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
                         composable("book_list") {
                             BookListScreen(
                                 viewModel = viewModel,

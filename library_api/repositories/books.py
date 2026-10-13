@@ -98,3 +98,25 @@ def list_books():
             book["images"] = images_by_book[book["id"]]
 
         return books
+
+
+def delete_book(book_id):
+    with database_connection() as connection:
+        row = connection.execute(
+            "SELECT * FROM book WHERE id = ?",
+            (book_id,),
+        ).fetchone()
+
+        if row is None:
+            return None
+
+        book = dict(row)
+        image_rows = connection.execute(
+            "SELECT image_url FROM book_images WHERE book_id = ?",
+            (book_id,),
+        ).fetchall()
+        image_urls = [img["image_url"] for img in image_rows]
+
+        connection.execute("DELETE FROM book_images WHERE book_id = ?", (book_id,))
+        connection.execute("DELETE FROM book WHERE id = ?", (book_id,))
+        return {"book": book, "image_urls": image_urls}

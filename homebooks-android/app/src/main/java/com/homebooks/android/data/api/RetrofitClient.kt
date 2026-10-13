@@ -7,9 +7,7 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
-    private const val DEFAULT_BASE_URL = "http://192.168.178.33:5005"
-
-    fun createService(baseUrl: String = DEFAULT_BASE_URL): BooksApiService {
+    fun createService(baseUrl: String = ApiConstants.BASE_URL): BooksApiService {
         val client = OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)

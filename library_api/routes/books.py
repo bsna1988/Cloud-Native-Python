@@ -9,6 +9,7 @@ from library_api.services.books import (
     create_book,
     get_book as find_book,
     list_books as find_books,
+    delete_book as remove_book_service,
 )
 
 books_bp = Blueprint("books", __name__)
@@ -73,3 +74,11 @@ def recognize_book():
         return jsonify({"error": str(error)}), 422
 
     return jsonify({"status": "recognized", "books": books}), 200
+
+
+@books_bp.delete("/<int:book_id>")
+def delete_one_book(book_id):
+    book = remove_book_service(book_id)
+    if book is None:
+        return jsonify({"error": "Book not found"}), 404
+    return jsonify({"status": "deleted", "book": book}), 200

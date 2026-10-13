@@ -9,6 +9,7 @@ from library_api.repositories.books import (
     create_book as insert_book,
     get_book as fetch_book,
     list_books as fetch_books,
+    delete_book as remove_book,
 )
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
@@ -54,3 +55,15 @@ def create_book(book, uploaded_files):
         for file_path in saved_paths:
             file_path.unlink(missing_ok=True)
         raise
+
+
+def delete_book(book_id):
+    result = remove_book(book_id)
+    if not result:
+        return None
+    upload_folder = Path(current_app.config["UPLOAD_FOLDER"])
+    for image_url in result["image_urls"]:
+        filename = image_url.split("/")[-1]
+        file_path = upload_folder / filename
+        file_path.unlink(missing_ok=True)
+    return result["book"]

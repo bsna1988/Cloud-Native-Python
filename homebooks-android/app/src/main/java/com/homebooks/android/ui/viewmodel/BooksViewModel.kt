@@ -100,4 +100,15 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
     fun clearRecognitionState() {
         _recognitionState.value = UiState.Idle
     }
+
+    fun deleteBook(id: Int) {
+        viewModelScope.launch {
+            val result = _repository.deleteBook(id)
+            result.onSuccess {
+                loadBooks()
+            }.onFailure { exception ->
+                _error.value = exception.message ?: "Failed to delete book"
+            }
+        }
+    }
 }

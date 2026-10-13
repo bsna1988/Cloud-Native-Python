@@ -1,11 +1,13 @@
 package com.homebooks.android.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -29,6 +31,7 @@ fun BookListScreen(
 ) {
     val booksState by viewModel.booksState.observeAsState(UiState.Loading)
     val errorMessage by viewModel.error.observeAsState(null)
+    var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         viewModel.loadBooks()
@@ -50,71 +53,125 @@ fun BookListScreen(
             }
         }
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when (val state = booksState) {
-                is UiState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
-                is UiState.Success<*> -> {
-                    val books = (state.data as? List<*>)?.filterIsInstance<Book>() ?: emptyList()
-                    if (books.isEmpty()) {
-                        Text(
-                            text = "No books found. Tap + to add one.",
-                            modifier = Modifier.align(Alignment.Center),
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(books) { book ->
-                                BookItemCard(book = book, onClick = {
-                                    book.id?.let { onBookClick(it) }
-                                })
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                label = { Text("Search books...") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                singleLine = true
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                when (val state = booksState) {
+                    is UiState.Loading -> {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    }
+                    is UiState.Success<*> -> {
+                        val books = (state.data as? List<*>)?.filterIsInstance<Book>() ?: emptyList()
+                        val filteredBooks = books.filter { book ->
+                            searchQuery.isBlank() ||
+                                book.title.contains(searchQuery, ignoreCase = true) ||
+                                book.author.contains(searchQuery, ignoreCase = true)
+                        }
+
+                        if (filteredBooks.isEmpty()) {
+                            Text(
+                                text = "No books found.",
+                                modifier = Modifier.align(Alignment.Center),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(filteredBooks, key = { it.id ?: it.hashCode() }) { book ->
+                                    val dismissState = rememberDismissState(
+                                        confirmValueChange = { dismissValue ->
+                                            if (dismissValue == DismissValue.DismissedToStart || dismissValue == DismissValue.DismissedToEnd) {
+                                                book.id?.let { viewModel.deleteBook(it) }
+                                                true
+                                            } else {
+                                                false
+                                            }
+                                        }
+                                    )
+                                    SwipeToDismiss(
+                                        state = dismissState,
+                                        background = {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .background(
+                                                        MaterialTheme.colorScheme.errorContainer,
+                                                        shape = MaterialTheme.shapes.medium
+                                                    )
+                                                    .padding(horizontal = 20.dp),
+                                                contentAlignment = Alignment.CenterEnd
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Delete,
+                                                    contentDescription = "Delete",
+                                                    tint = MaterialTheme.colorScheme.onErrorContainer
+                                                )
+                                            }
+                                        },
+                                        dismissContent = {
+                                            BookItemCard(book = book, onClick = {
+                                                book.id?.let { onBookClick(it) }
+                                            })
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
-                }
-                is UiState.Error -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "Error: ${state.message}",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { viewModel.loadBooks() }) {
-                            Text(text = "Retry")
+                    is UiState.Error -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Error: ${state.message}",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = { viewModel.loadBooks() }) {
+                                Text(text = "Retry")
+                            }
                         }
                     }
+                    else -> {}
                 }
-                else -> {}
-            }
 
-            errorMessage?.let { msg ->
-                Snackbar(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(16.dp),
-                    action = {
-                        TextButton(onClick = { viewModel.clearError() }) {
-                            Text(text = "Dismiss")
+                errorMessage?.let { msg ->
+                    Snackbar(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(16.dp),
+                        action = {
+                            TextButton(onClick = { viewModel.clearError() }) {
+                                Text(text = "Dismiss")
+                            }
                         }
+                    ) {
+                        Text(text = msg)
                     }
-                ) {
-                    Text(text = msg)
                 }
             }
         }

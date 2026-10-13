@@ -1,6 +1,7 @@
 package com.homebooks.android.data.repository
 
 import android.content.Context
+import com.homebooks.android.data.api.ApiConstants
 import com.homebooks.android.data.api.BooksApiService
 import com.homebooks.android.data.model.Book
 import com.homebooks.android.data.model.RecognizedBook
@@ -18,7 +19,7 @@ class BooksRepository(
 
     private val baseUrl: String = run {
         val prefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-        prefs.getString("api_base_url", "http://192.168.178.33:5005/") ?: "http://192.168.178.33:5005/"
+        prefs.getString("api_base_url", ApiConstants.BASE_URL) ?: ApiConstants.BASE_URL
     }
 
     private fun transformBook(book: Book): Book {
@@ -114,5 +115,19 @@ class BooksRepository(
     fun addApiBaseToUrl(thumbnailPath: String?): String? {
         if (thumbnailPath.isNullOrBlank()) return null
         return if (thumbnailPath.startsWith("http")) thumbnailPath else "$baseUrl$thumbnailPath"
+    }
+
+    suspend fun deleteBook(id: Int): Result<Unit> {
+        return try {
+            val response = apiService.deleteBook(id)
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                val errorMsg = response.errorBody()?.string() ?: "Failed to delete book: ${response.code()}"
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

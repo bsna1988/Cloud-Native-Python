@@ -30,4 +30,7 @@ interface BooksApiService {
 
     @GET("uploads/{filename}")
     suspend fun getUploadedImage(@Path("filename") filename: String): Response<ByteArray>
+
+    @DELETE("api/v1/books/{id}")
+    suspend fun deleteBook(@Path("id") bookId: Int): Response<ApiResponse>
 }

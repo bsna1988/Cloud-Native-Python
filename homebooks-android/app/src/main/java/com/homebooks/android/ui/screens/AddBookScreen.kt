@@ -9,6 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -196,13 +197,37 @@ fun AddBookScreen(
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    selectedModels.forEach { model ->
-                        AsyncImage(
-                            model = model,
-                            contentDescription = "Selected Image",
-                            modifier = Modifier.size(90.dp),
-                            contentScale = ContentScale.Crop
-                        )
+                    selectedModels.forEachIndexed { index, model ->
+                        Box(
+                            modifier = Modifier.size(90.dp)
+                        ) {
+                            AsyncImage(
+                                model = model,
+                                contentDescription = "Selected Image",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                            IconButton(
+                                onClick = {
+                                    selectedFiles = selectedFiles.toMutableList().apply { removeAt(index) }
+                                    selectedModels = selectedModels.toMutableList().apply { removeAt(index) }
+                                    if (selectedFiles.isNotEmpty()) {
+                                        viewModel.recognizeImages(selectedFiles)
+                                    } else {
+                                        viewModel.clearRecognitionState()
+                                    }
+                                },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(24.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Remove image",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
                     }
                 }
             }

@@ -3,7 +3,9 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 export const loadBooks = createAsyncThunk(
     'books/loadBooks',
     async () => {
-        const response = await fetch('/api/v1/books');
+        const response = await fetch('/api/v1/books', {
+            headers: { 'X-API-Key': 'homebooks_secret_key_12345' },
+        });
         const data = await response.json();
 
         if (!response.ok) {

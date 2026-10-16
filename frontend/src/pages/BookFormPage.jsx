@@ -41,6 +41,7 @@ export default function BookFormPage() {
 			}
 			const response = await fetch('/api/v1/books', {
 				method: 'POST',
+				headers: { 'X-API-Key': 'homebooks_secret_key_12345' },
 				body: formData,
 			});
 
@@ -74,6 +75,7 @@ export default function BookFormPage() {
 			try {
 				const response = await fetch('/api/v1/books/recognize', {
 					method: 'POST',
+					headers: { 'X-API-Key': 'homebooks_secret_key_12345' },
 					body: formData,
 				});
 				if (!response.ok) {
@@ -161,7 +163,7 @@ export default function BookFormPage() {
 			</label>
 
 			<label>
-				<span>Images</span>
+				<span>Images`</span>
 				<input
 					type="file"
 					name="files"

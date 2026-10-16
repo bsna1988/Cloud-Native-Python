@@ -10,7 +10,9 @@ export default function BookDetailsPage() {
     useEffect(() => {
         async function loadBook() {
             try {
-                const response = await fetch(`/api/v1/books/${id}`)
+                const response = await fetch(`/api/v1/books/${id}`, {
+                    headers: { 'X-API-Key': 'homebooks_secret_key_12345' },
+                })
 
                 if (!response.ok) {
                     throw new Error('Book not found')

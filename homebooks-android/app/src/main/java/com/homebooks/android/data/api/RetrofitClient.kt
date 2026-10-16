@@ -7,8 +7,16 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
+    private const val API_KEY = "homebooks_secret_key_12345"
+
     fun createService(baseUrl: String = ApiConstants.BASE_URL): BooksApiService {
         val client = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request().newBuilder()
+                    .addHeader("X-API-Key", API_KEY)
+                    .build()
+                chain.proceed(request)
+            }
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)

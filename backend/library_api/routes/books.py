@@ -1,6 +1,7 @@
 import json
+from functools import wraps
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 
 from library_api.repositories.books import DuplicateBookError
 from library_api.services.books import create_book
@@ -16,12 +17,26 @@ from library_api.services.book_metadata import query_book_metadata
 
 books_bp = Blueprint("books", __name__)
 
+
+def require_api_key(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        api_key = request.headers.get("X-API-Key")
+        expected_key = current_app.config.get("API_KEY", "homebooks_secret_key_12345")
+        if not api_key or api_key != expected_key:
+            return jsonify({"error": "Unauthorized: Invalid or missing API Key"}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 @books_bp.get("")
+@require_api_key
 def get_books():
     return jsonify({"books": find_books()}), 200
 
 
 @books_bp.get("/<int:book_id>")
+@require_api_key
 def get_one_book(book_id):
     book = find_book(book_id)
 
@@ -30,7 +45,9 @@ def get_one_book(book_id):
 
     return jsonify({"book": book}), 200
 
+
 @books_bp.post("")
+@require_api_key
 def add_book():
     book_json = request.form.get("book")
     if not book_json:
@@ -57,6 +74,7 @@ def add_book():
 
 
 @books_bp.post("/recognize")
+@require_api_key
 def recognize_book():
     images = [
         image for image in request.files.getlist("images")
@@ -79,6 +97,7 @@ def recognize_book():
 
 
 @books_bp.delete("/<int:book_id>")
+@require_api_key
 def delete_one_book(book_id):
     book = remove_book_service(book_id)
     if book is None:
@@ -87,6 +106,7 @@ def delete_one_book(book_id):
 
 
 @books_bp.put("/<int:book_id>")
+@require_api_key
 def update_one_book(book_id):
     book_json = request.form.get("book")
     if not book_json:
@@ -121,6 +141,7 @@ def update_one_book(book_id):
 
 
 @books_bp.get("/barcode/<isbn>")
+@require_api_key
 def search_by_barcode(isbn):
     books = query_book_metadata(isbn=isbn)
     if not books:

@@ -2,6 +2,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from flask import current_app
+from PIL import Image
 from werkzeug.utils import secure_filename
 
 from library_api.repositories.books import (
@@ -23,6 +24,17 @@ def list_books():
 def get_book(book_id):
     return fetch_book(book_id)
 
+
+def optimize_image(input_path, output_path, max_dimension=1200, quality=80):
+    """Resize image if too large and compress as optimized JPEG to save SD card space."""
+    with Image.open(input_path) as img:
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        if max(img.size) > max_dimension:
+            img.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
+        img.save(output_path, "JPEG", optimize=True, quality=quality)
+
+
 def create_book(book, uploaded_files):
     if not book.get("title", "").strip():
         raise ValueError("Title is required")
@@ -43,9 +55,15 @@ def create_book(book, uploaded_files):
             if extension not in ALLOWED_EXTENSIONS:
                 raise ValueError("Images must be JPG, PNG, or WEBP files")
 
-            filename = f"{uuid4().hex}{extension}"
+            filename = f"{uuid4().hex}.jpg"
             file_path = upload_folder / filename
-            uploaded_file.save(file_path)
+
+            temp_input = upload_folder / f"temp_{uuid4().hex}{extension}"
+            uploaded_file.save(temp_input)
+            try:
+                optimize_image(temp_input, file_path)
+            finally:
+                temp_input.unlink(missing_ok=True)
 
             saved_paths.append(file_path)
             image_urls.append(f"/uploads/{filename}")
@@ -88,9 +106,15 @@ def update_book(book_id, book, uploaded_files, removed_image_urls):
             if extension not in ALLOWED_EXTENSIONS:
                 raise ValueError("Images must be JPG, PNG, or WEBP files")
 
-            filename = f"{uuid4().hex}{extension}"
+            filename = f"{uuid4().hex}.jpg"
             file_path = upload_folder / filename
-            uploaded_file.save(file_path)
+
+            temp_input = upload_folder / f"temp_{uuid4().hex}{extension}"
+            uploaded_file.save(temp_input)
+            try:
+                optimize_image(temp_input, file_path)
+            finally:
+                temp_input.unlink(missing_ok=True)
 
             saved_paths.append(file_path)
             new_image_urls.append(f"/uploads/{filename}")

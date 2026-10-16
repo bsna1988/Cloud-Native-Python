@@ -1,3 +1,148 @@
-Cloud Native Python
+# HomeBooks — Personal Library Management System
 
+> An intelligent, full-stack cross-platform book management system featuring an Android mobile app (Jetpack Compose), a React web frontend, and a modular Python Flask backend with AI/OCR book recognition and on-device barcode scanning.
 
+---
+
+## 🏗️ Architecture Overview & Significant Design Decisions
+
+HomeBooks follows a clean monorepo architecture consisting of three primary tiers:
+1. **Client Tier (Mobile & Web):**
+   - **Android App:** Built with Jetpack Compose, Material 3, ViewModel, LiveData, Retrofit, and Coil. Features on-device barcode scanning (ZXing) and Google AdMob monetization.
+   - **React Web App:** Built with React 19, React Router, Redux Toolkit, and Vite, served directly by the Flask backend.
+2. **Server Tier (Backend):**
+   - **Flask REST API (`/backend`):** Modular blueprint-based Python application (`/api/v1/books`).
+   - **Strategy Pattern for Recognition:** Pluggable recognition pipeline supporting barcode and cover OCR strategies.
+   - **Metadata Providers:** Extensible search providers starting with **Google Books API** (primary) and falling back to **OpenLibrary**.
+3. **Data Tier:**
+   - **SQLite (`books.db`):** Local relational database managing books and multi-image associations.
+
+```mermaid
+graph TD
+    subgraph Clients [Client Tier]
+        Android[Android App / Jetpack Compose]
+        Web[React Web Frontend]
+    end
+
+    subgraph Backend [Server Tier / Flask API]
+        Flask[Flask REST API :5005 / X-API-Key Auth]
+        Strategies[Recognition Strategy Pattern]
+        Providers[Metadata Providers: Google Books & OpenLibrary]
+    end
+
+    subgraph Storage [Data Tier]
+        SQLite[(SQLite books.db)]
+        Uploads[(Uploads Folder)]
+    end
+
+    Android -->|HTTP REST + X-API-Key| Flask
+    Web -->|HTTP REST + X-API-Key| Flask
+    Flask --> Strategies
+    Flask --> Providers
+    Flask --> SQLite
+    Flask --> Uploads
+```
+
+---
+
+## 🔒 Security & Authentication
+
+- **API Key Header Authentication (`X-API-Key`):**
+  To prevent unauthorized direct calls to the backend API, all REST endpoints (`/api/v1/books/...`) are protected by an API Key decorator (`@require_api_key`).
+- **Client Enforcement:** 
+  The Android Retrofit client (`RetrofitClient.kt`) automatically attaches the `X-API-Key` header to every outgoing HTTP request via an OkHttp Interceptor.
+
+---
+
+## 🛠️ Frameworks & Tech Stack
+
+| Component | Technology / Library | Purpose |
+| :--- | :--- | :--- |
+| **Android App** | Kotlin, Jetpack Compose, Material 3 | Declarative mobile UI & navigation |
+| **Networking** | Retrofit 2, OkHttp 3, Gson | REST communication with Flask API & Auth interceptors |
+| **Image Loading** | Coil 2.5 | Async image loading, caching, and full-screen pager |
+| **Barcode Scanner** | ZXing Android Embedded | On-device ISBN barcode scanning via camera |
+| **Web Frontend** | React 19, Vite, Redux Toolkit, React Router | Web dashboard and book management |
+| **Backend API** | Python 3, Flask, Gunicorn | REST API, auth middleware, and static web server |
+| **Image Processing** | Pillow | Automatic image resizing and JPEG compression |
+| **Database** | SQLite, Raw SQL / DB Connection | Persistent local relational storage |
+
+---
+
+## 🗄️ Database Schema
+
+- **`book` Table:** Stores book metadata (`id`, `barcode`, `title`, `author`, `release_date`, `description`, `thumbnail`).
+- **`book_images` Table:** Stores associated image paths for each book (`id`, `book_id`, `image_url`).
+
+---
+
+## 🔌 API Endpoints (Protected by `X-API-Key`)
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/books` | List all library books with images |
+| `GET` | `/api/v1/books/<id>` | Get book details by ID |
+| `POST` | `/api/v1/books` | Add a new book with multipart images |
+| `PUT` | `/api/v1/books/<id>` | Update book details and manage images |
+| `DELETE` | `/api/v1/books/<id>` | Delete a book and clean up storage files |
+| `POST` | `/api/v1/books/recognize` | AI/OCR image recognition & metadata matching |
+| `GET` | `/api/v1/books/barcode/<isbn>` | Search book metadata by scanned barcode |
+| `GET` | `/uploads/<filename>` | Serve uploaded book cover / gallery images |
+
+---
+
+## ✨ Main App Functions
+
+1. **Book List & Real-Time Search:** Instant filtering by title or author.
+2. **Swipe-to-Delete:** Material 3 dismiss actions to remove books.
+3. **Multi-Image Staging & Management:** Add photos via Gallery or Camera, with individual image removal via long-press or 'X' button.
+4. **On-Device Barcode Scanning:** Fast local barcode scanning to instantly fetch book info.
+5. **AI/OCR Recognition:** Pluggable strategy pipeline (Google Books primary, OpenLibrary fallback, cover OCR).
+6. **Full-Screen Image Gallery:** Horizontal pager with zoom/fit and swipe navigation.
+7. **Monetisation:** Google AdMob Rewarded Ads (~30s) triggered after every 5th successful book addition.
+8. **Automatic Image Compression & Resizing:** Uploaded photos are automatically resized (max 1200px) and compressed as optimized JPEGs (80% quality) on the backend to conserve Raspberry Pi SD card storage.
+
+---
+
+## 🧪 Testing Strategy
+
+- **Backend Unit Tests:** Pytest for Flask routes, repositories, and recognition strategies.
+- **Android Unit & UI Tests:** JUnit, Espresso, and Compose UI testing for ViewModels and Composable screens.
+
+---
+
+## 🚀 CI/CD & Deployment
+
+- **Raspberry Pi Hosting (`192.168.178.37`):** Runs as a local Wi-Fi bridge service via Systemd and Gunicorn.
+- **Automated Deployment (`deploy.sh` & Webhook):** GitHub push events trigger automated pull, frontend Vite build, dependency updates, and service restart.
+
+---
+
+## 📖 Runbook
+
+### Local Development
+```bash
+# 1. Run Backend
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python run.py
+
+# 2. Run Frontend
+cd frontend
+npm install
+npm run dev
+
+# 3. Run Android App
+# Open homebooks-android in Android Studio and run on emulator/device.
+```
+
+### Production Deployment (Raspberry Pi)
+```bash
+# One-time setup on Raspberry Pi
+cd /home/pi/Cloud-Native-Python
+sudo cp deploy/homebooks-backend.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now homebooks-backend
+```

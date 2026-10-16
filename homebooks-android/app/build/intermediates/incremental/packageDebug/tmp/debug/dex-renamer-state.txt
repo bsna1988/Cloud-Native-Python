@@ -1,6 +1,8 @@
-#Fri Oct 16 21:06:47 CEST 2026
+#Fri Oct 16 23:09:46 CEST 2026
 base.0=/Users/sasha/Cloud-Native-Python/homebooks-android/app/build/intermediates/dex/debug/mergeExtDexDebug/classes.dex
 base.1=/Users/sasha/Cloud-Native-Python/homebooks-android/app/build/intermediates/dex/debug/mergeProjectDexDebug/0/classes.dex
+base.10=/Users/sasha/Cloud-Native-Python/homebooks-android/app/build/intermediates/dex/debug/mergeProjectDexDebug/10/classes.dex
+base.11=/Users/sasha/Cloud-Native-Python/homebooks-android/app/build/intermediates/dex/debug/mergeExtDexDebug/classes3.dex
 base.2=/Users/sasha/Cloud-Native-Python/homebooks-android/app/build/intermediates/dex/debug/mergeProjectDexDebug/1/classes.dex
 base.3=/Users/sasha/Cloud-Native-Python/homebooks-android/app/build/intermediates/dex/debug/mergeProjectDexDebug/12/classes.dex
 base.4=/Users/sasha/Cloud-Native-Python/homebooks-android/app/build/intermediates/dex/debug/mergeProjectDexDebug/14/classes.dex
@@ -11,6 +13,8 @@ base.8=/Users/sasha/Cloud-Native-Python/homebooks-android/app/build/intermediate
 base.9=/Users/sasha/Cloud-Native-Python/homebooks-android/app/build/intermediates/dex/debug/mergeExtDexDebug/classes2.dex
 path.0=classes.dex
 path.1=0/classes.dex
+path.10=10/classes.dex
+path.11=classes3.dex
 path.2=1/classes.dex
 path.3=12/classes.dex
 path.4=14/classes.dex
@@ -21,6 +25,8 @@ path.8=8/classes.dex
 path.9=classes2.dex
 renamed.0=classes.dex
 renamed.1=classes2.dex
+renamed.10=classes11.dex
+renamed.11=classes12.dex
 renamed.2=classes3.dex
 renamed.3=classes4.dex
 renamed.4=classes5.dex

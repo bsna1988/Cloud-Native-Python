@@ -1,0 +1,12 @@
+[Unit]
+Description=HomeBooks Flask Backend Service
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/Cloud-Native-Python/backend
+ExecStart=/home/pi/Cloud-Native-Python/.venv/bin/gunicorn --workers 3 --bind 0.0.0.0:5005 run:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -350,7 +350,17 @@ fun AddBookScreen(
                                 description = description,
                                 imageFiles = selectedFiles
                             ) {
-                                onBookAdded()
+                                val prefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+                                val count = prefs.getInt("added_books_count", 0) + 1
+                                prefs.edit().putInt("added_books_count", count).apply()
+
+                                if (count % 5 == 0 && context is android.app.Activity) {
+                                    com.homebooks.android.util.AdManager.showAd(context) {
+                                        onBookAdded()
+                                    }
+                                } else {
+                                    onBookAdded()
+                                }
                             }
                         }
                     },

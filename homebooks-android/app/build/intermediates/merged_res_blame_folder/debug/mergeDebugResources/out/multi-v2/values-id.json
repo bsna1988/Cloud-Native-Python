@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.homebooks.android.app-mergeDebugResources-66:/values-id/values-id.xml",
+            "outputFile": "com.homebooks.android.app-mergeDebugResources-75:/values-id/values-id.xml",
             "map": [
                 {
                     "source": "/Users/sasha/.gradle/caches/9.6.0/transforms/95864cf82cf96eb5649afd84f8f5aecf/transformed/zxing-android-embedded-4.3.0/res/values-id/values-id.xml",

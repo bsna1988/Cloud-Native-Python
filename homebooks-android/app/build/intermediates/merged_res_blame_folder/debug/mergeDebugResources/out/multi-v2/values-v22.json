@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.homebooks.android.app-mergeDebugResources-66:/values-v22/values-v22.xml",
+            "outputFile": "com.homebooks.android.app-mergeDebugResources-75:/values-v22/values-v22.xml",
             "map": [
                 {
                     "source": "/Users/sasha/.gradle/caches/9.6.0/transforms/905b80f5fe9d212640ddbdac94642ac5/transformed/appcompat-1.6.1/res/values-v22/values-v22.xml",

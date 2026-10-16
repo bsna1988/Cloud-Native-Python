@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 
 from library_api.routes.books import books_bp
@@ -26,7 +26,17 @@ def create_app(test_config=None):
 
     app.register_blueprint(books_bp, url_prefix="/api/v1/books")
     app.register_blueprint(uploads_bp)
-    
+
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
+    def serve_frontend(path):
+        dist_dir = project_root.parent / "frontend" / "dist"
+        if path and (dist_dir / path).exists():
+            return send_from_directory(str(dist_dir), path)
+        if (dist_dir / "index.html").exists():
+            return send_from_directory(str(dist_dir), "index.html")
+        return "Frontend build not found. Run 'npm run build' in frontend directory.", 404
+
     CORS(app)
 
     return app

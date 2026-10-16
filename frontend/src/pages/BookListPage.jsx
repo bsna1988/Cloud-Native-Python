@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom'
 import BookCard from "../components/BookCard.jsx";
-import { loadBooks } from "../features/books/booksSlice.js";
+import { loadBooks } from "../features/books/booksSLice.js";
 
 function BookListPage() {
     const dispatch = useDispatch()

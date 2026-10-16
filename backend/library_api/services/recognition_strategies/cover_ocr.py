@@ -1,8 +1,12 @@
 import re
 
 import requests
-import spacy
 from flask import current_app
+
+try:
+    import spacy
+except ImportError:
+    spacy = None
 
 try:
     import easyocr
@@ -34,8 +38,10 @@ def extract_isbn_from_ocr(results):
 
 def read_text_from_image(image_path):
     """Run EasyOCR and return its detected text regions."""
+    if easyocr is None:
+        return []
     try:
-        reader = easyocr.Reader(["en", "fr"], gpu=True)
+        reader = easyocr.Reader(["en", "fr"], gpu=False)
         return reader.readtext(image_path, detail=1, paragraph=False)
     except Exception as error:
         current_app.logger.exception("EasyOCR failed")
@@ -83,6 +89,7 @@ def normalize_spaced_name(text):
         ):
             line_text = "".join(words)
 
+        # Correct a common OCR substitution at the end of a name.
         line_text = re.sub(r"(?<=\w)2$", "Z", line_text)
         normalized_lines.append(line_text)
 
@@ -91,6 +98,9 @@ def normalize_spaced_name(text):
 
 def extract_author_names_from_ocr(results):
     """Use spaCy named-entity recognition to find person names in OCR text."""
+    if spacy is None:
+        return []
+
     raw_text = "\n".join(
         text.strip()
         for _, text, confidence in results
@@ -102,9 +112,7 @@ def extract_author_names_from_ocr(results):
         nlp = spacy.load("en_core_web_sm")
     except OSError as error:
         current_app.logger.exception("spaCy English model is unavailable")
-        raise ValueError(
-            "The spaCy model en_core_web_sm is not installed"
-        ) from error
+        return []
 
     document = nlp(author_text)
     return [
@@ -119,7 +127,7 @@ class CoverOcrRecognitionStrategy(RecognitionStrategy):
     is_primary = False
 
     def recognize(self, uploaded_files, temp_paths):
-        if not easyocr:
+        if not easyocr or spacy is None:
             return None
 
         cover_image_path = None

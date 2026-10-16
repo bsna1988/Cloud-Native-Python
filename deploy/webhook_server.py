@@ -2,7 +2,7 @@ import subprocess
 from flask import Flask, jsonify, request
 
 app = Flask(__name__)
-DEPLOY_SCRIPT = "/home/pi/Cloud-Native-Python/deploy/deploy.sh"
+DEPLOY_SCRIPT = "/home/bsna1988/Cloud-Native-Python/deploy/deploy.sh"
 
 
 @app.post("/webhook")

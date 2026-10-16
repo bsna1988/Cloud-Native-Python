@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-REPO_DIR="/home/pi/Cloud-Native-Python"
+REPO_DIR="/home/bsna1988/Cloud-Native-Python"
 cd "$REPO_DIR"
 
 echo "Pulling latest changes from GitHub..."

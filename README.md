@@ -146,3 +146,14 @@ sudo cp deploy/homebooks-backend.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now homebooks-backend
 ```
+
+### Viewing Backend Logs (Raspberry Pi)
+To stream live logs from the background systemd service:
+```bash
+sudo journalctl -u homebooks-backend -f
+```
+
+To view the last 100 log lines:
+```bash
+sudo journalctl -u homebooks-backend -n 100 --no-pager
+```

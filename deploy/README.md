@@ -7,7 +7,7 @@ This guide covers the one-time provisioning of the Raspberry Pi (`192.168.178.37
 ## Prerequisites
 - SSH access to the Raspberry Pi:
   ```bash
-  ssh pi@192.168.178.37
+  ssh bsna1988@192.168.178.37
   ```
 - Git, Python 3, and Node.js/npm installed on the Raspberry Pi.
 
@@ -17,7 +17,7 @@ This guide covers the one-time provisioning of the Raspberry Pi (`192.168.178.37
 
 ### 1. Clone or Navigate to Repository
 ```bash
-cd /home/pi/Cloud-Native-Python
+cd /home/bsna1988/Cloud-Native-Python
 git pull origin main
 ```
 
@@ -57,9 +57,9 @@ sudo systemctl status homebooks-backend
 ### 5. Optional: Automated GitHub Webhook Listener
 To enable automatic redeployment on every push to GitHub:
 ```bash
-cd backend
-../.venv/bin/pip install flask
-nohup python3 ../deploy/webhook_server.py > webhook.log 2>&1 &
+cd /home/bsna1988/Cloud-Native-Python
+backend/.venv/bin/pip install flask
+nohup python3 deploy/webhook_server.py > webhook.log 2>&1 &
 ```
 
 ---

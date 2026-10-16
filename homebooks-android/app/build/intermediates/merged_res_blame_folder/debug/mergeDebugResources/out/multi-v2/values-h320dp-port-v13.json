@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.homebooks.android.app-mergeDebugResources-65:/values-h320dp-port-v13/values-h320dp-port-v13.xml",
+            "outputFile": "com.homebooks.android.app-mergeDebugResources-66:/values-h320dp-port-v13/values-h320dp-port-v13.xml",
             "map": [
                 {
                     "source": "/Users/sasha/.gradle/caches/9.6.0/transforms/cdd13975a24e3fcfd99ef27027605843/transformed/material-1.11.0/res/values-h320dp-port-v13/values-h320dp-port-v13.xml",

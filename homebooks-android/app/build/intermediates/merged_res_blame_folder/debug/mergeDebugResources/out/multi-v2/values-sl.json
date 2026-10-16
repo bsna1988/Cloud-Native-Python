@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.homebooks.android.app-mergeDebugResources-65:/values-sl/values-sl.xml",
+            "outputFile": "com.homebooks.android.app-mergeDebugResources-66:/values-sl/values-sl.xml",
             "map": [
                 {
                     "source": "/Users/sasha/.gradle/caches/9.6.0/transforms/cdd13975a24e3fcfd99ef27027605843/transformed/material-1.11.0/res/values-sl/values-sl.xml",
@@ -54,6 +54,23 @@
                         "startOffsets": "5140,5235,8940,9036,9214,9613,9690,14225,14317,14399,14472,14621,14703,14957,15311,15389,15459",
                         "endColumns": "94,80,95,97,84,76,86,91,81,72,71,81,85,71,77,69,120",
                         "endOffsets": "5230,5311,9031,9129,9294,9685,9772,14312,14394,14467,14539,14698,14784,15024,15384,15454,15575"
+                    }
+                },
+                {
+                    "source": "/Users/sasha/.gradle/caches/9.6.0/transforms/95864cf82cf96eb5649afd84f8f5aecf/transformed/zxing-android-embedded-4.3.0/res/values-sl/values-sl.xml",
+                    "from": {
+                        "startLines": "2,3,4,5",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "55,114,165,318",
+                        "endColumns": "58,50,152,99",
+                        "endOffsets": "109,160,313,413"
+                    },
+                    "to": {
+                        "startLines": "184,185,186,187",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "16891,16950,17001,17154",
+                        "endColumns": "58,50,152,99",
+                        "endOffsets": "16945,16996,17149,17249"
                     }
                 },
                 {

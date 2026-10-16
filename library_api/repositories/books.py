@@ -120,3 +120,42 @@ def delete_book(book_id):
         connection.execute("DELETE FROM book_images WHERE book_id = ?", (book_id,))
         connection.execute("DELETE FROM book WHERE id = ?", (book_id,))
         return {"book": book, "image_urls": image_urls}
+
+
+def update_book(book_id, book, new_image_urls, removed_image_urls):
+    with database_connection() as connection:
+        row = connection.execute("SELECT * FROM book WHERE id = ?", (book_id,)).fetchone()
+        if row is None:
+            return None
+
+        connection.execute(
+            """
+            UPDATE book
+            SET barcode = ?, title = ?, author = ?, release_date = ?, description = ?
+            WHERE id = ?
+            """,
+            (
+                book.get("barcode"),
+                book["title"],
+                book["author"],
+                book.get("release_date", ""),
+                book.get("description", ""),
+                book_id,
+            ),
+        )
+
+        for img_url in removed_image_urls:
+            connection.execute("DELETE FROM book_images WHERE book_id = ? AND image_url = ?", (book_id, img_url))
+
+        for img_url in new_image_urls:
+            connection.execute("INSERT INTO book_images (book_id, image_url) VALUES (?, ?)", (book_id, img_url))
+
+        first_img = connection.execute("SELECT image_url FROM book_images WHERE book_id = ? ORDER BY id LIMIT 1", (book_id,)).fetchone()
+        thumbnail = first_img["image_url"] if first_img else None
+        connection.execute("UPDATE book SET thumbnail = ? WHERE id = ?", (thumbnail, book_id))
+
+        updated_row = connection.execute("SELECT * FROM book WHERE id = ?", (book_id,)).fetchone()
+        updated_book = dict(updated_row)
+        image_rows = connection.execute("SELECT image_url FROM book_images WHERE book_id = ? ORDER BY id", (book_id,)).fetchall()
+        updated_book["images"] = [img["image_url"] for img in image_rows]
+        return updated_book

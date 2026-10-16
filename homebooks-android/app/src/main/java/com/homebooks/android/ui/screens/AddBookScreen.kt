@@ -2,6 +2,8 @@ package com.homebooks.android.ui.screens
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -23,9 +25,11 @@ import coil.compose.AsyncImage
 import com.homebooks.android.data.model.RecognizedBook
 import com.homebooks.android.ui.viewmodel.BooksViewModel
 import com.homebooks.android.ui.viewmodel.UiState
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import java.io.File
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun AddBookScreen(
     viewModel: BooksViewModel,
@@ -69,7 +73,6 @@ fun AddBookScreen(
             if (newFiles.isNotEmpty()) {
                 selectedFiles = selectedFiles + newFiles
                 selectedModels = selectedModels + uris
-                viewModel.recognizeImages(selectedFiles)
             }
         }
     }
@@ -81,7 +84,16 @@ fun AddBookScreen(
             val file = cameraFile!!
             selectedFiles = selectedFiles + file
             selectedModels = selectedModels + file
-            viewModel.recognizeImages(selectedFiles)
+        }
+    }
+
+    val barcodeLauncher = rememberLauncherForActivityResult(
+        contract = ScanContract()
+    ) { result ->
+        if (result.contents != null) {
+            val scannedIsbn = result.contents
+            barcode = scannedIsbn
+            viewModel.searchByBarcode(scannedIsbn)
         }
     }
 
@@ -177,6 +189,36 @@ fun AddBookScreen(
                 }
             }
 
+            // Scan Barcode Button
+            Button(
+                onClick = {
+                    val options = ScanOptions().apply {
+                        setDesiredBarcodeFormats(ScanOptions.ONE_D_CODE_TYPES)
+                        setPrompt("Scan book barcode (ISBN)")
+                        setCameraId(0)
+                        setBeepEnabled(true)
+                        setBarcodeImageEnabled(true)
+                    }
+                    barcodeLauncher.launch(options)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+            ) {
+                Text("Scan Barcode (On-Phone)")
+            }
+
+            // Separate Recognize Images Button (only if images are selected)
+            if (selectedFiles.isNotEmpty()) {
+                Button(
+                    onClick = {
+                        viewModel.recognizeImages(selectedFiles)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Recognize Added Images")
+                }
+            }
+
             if (recognitionState is UiState.Loading) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -190,7 +232,7 @@ fun AddBookScreen(
             }
 
             if (selectedModels.isNotEmpty()) {
-                Text("Selected Images (${selectedModels.size}):", style = MaterialTheme.typography.titleSmall)
+                Text("Selected Images (${selectedModels.size}) - Long press or tap X to remove:", style = MaterialTheme.typography.titleSmall)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -199,7 +241,18 @@ fun AddBookScreen(
                 ) {
                     selectedModels.forEachIndexed { index, model ->
                         Box(
-                            modifier = Modifier.size(90.dp)
+                            modifier = Modifier
+                                .size(90.dp)
+                                .combinedClickable(
+                                    onClick = {},
+                                    onLongClick = {
+                                        selectedFiles = selectedFiles.toMutableList().apply { removeAt(index) }
+                                        selectedModels = selectedModels.toMutableList().apply { removeAt(index) }
+                                        if (selectedFiles.isEmpty()) {
+                                            viewModel.clearRecognitionState()
+                                        }
+                                    }
+                                )
                         ) {
                             AsyncImage(
                                 model = model,
@@ -211,9 +264,7 @@ fun AddBookScreen(
                                 onClick = {
                                     selectedFiles = selectedFiles.toMutableList().apply { removeAt(index) }
                                     selectedModels = selectedModels.toMutableList().apply { removeAt(index) }
-                                    if (selectedFiles.isNotEmpty()) {
-                                        viewModel.recognizeImages(selectedFiles)
-                                    } else {
+                                    if (selectedFiles.isEmpty()) {
                                         viewModel.clearRecognitionState()
                                     }
                                 },

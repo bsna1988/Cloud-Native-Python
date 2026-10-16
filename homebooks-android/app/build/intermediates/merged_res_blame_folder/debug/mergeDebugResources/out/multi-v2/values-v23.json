@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.homebooks.android.app-mergeDebugResources-65:/values-v23/values-v23.xml",
+            "outputFile": "com.homebooks.android.app-mergeDebugResources-66:/values-v23/values-v23.xml",
             "map": [
                 {
                     "source": "/Users/sasha/.gradle/caches/9.6.0/transforms/6de38b283ce244c1945bb4bfe807c53d/transformed/cardview-1.0.0/res/values-v23/values-v23.xml",

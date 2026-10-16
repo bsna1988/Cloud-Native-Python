@@ -16,6 +16,7 @@ import androidx.navigation.navArgument
 import com.homebooks.android.ui.screens.AddBookScreen
 import com.homebooks.android.ui.screens.BookDetailScreen
 import com.homebooks.android.ui.screens.BookListScreen
+import com.homebooks.android.ui.screens.EditBookScreen
 import com.homebooks.android.ui.screens.SplashScreen
 import com.homebooks.android.ui.theme.HomeBooksTheme
 import com.homebooks.android.ui.viewmodel.BooksViewModel
@@ -62,6 +63,7 @@ class MainActivity : ComponentActivity() {
                             BookDetailScreen(
                                 bookId = bookId,
                                 viewModel = viewModel,
+                                onEditClick = { navController.navigate("edit_book/$bookId") },
                                 onBackClick = { navController.popBackStack() }
                             )
                         }
@@ -69,6 +71,18 @@ class MainActivity : ComponentActivity() {
                             AddBookScreen(
                                 viewModel = viewModel,
                                 onBookAdded = { navController.popBackStack() },
+                                onBackClick = { navController.popBackStack() }
+                            )
+                        }
+                        composable(
+                            route = "edit_book/{bookId}",
+                            arguments = listOf(navArgument("bookId") { type = NavType.IntType })
+                        ) { backStackEntry ->
+                            val bookId = backStackEntry.arguments?.getInt("bookId") ?: 0
+                            EditBookScreen(
+                                bookId = bookId,
+                                viewModel = viewModel,
+                                onBookUpdated = { navController.popBackStack() },
                                 onBackClick = { navController.popBackStack() }
                             )
                         }

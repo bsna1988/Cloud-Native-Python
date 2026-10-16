@@ -33,4 +33,16 @@ interface BooksApiService {
 
     @DELETE("api/v1/books/{id}")
     suspend fun deleteBook(@Path("id") bookId: Int): Response<ApiResponse>
+
+    @Multipart
+    @PUT("api/v1/books/{id}")
+    suspend fun updateBook(
+        @Path("id") bookId: Int,
+        @Part("book") bookJson: RequestBody,
+        @Part images: List<MultipartBody.Part>,
+        @Part("removed_images") removedImagesJson: RequestBody
+    ): Response<ApiResponse>
+
+    @GET("api/v1/books/barcode/{isbn}")
+    suspend fun searchByBarcode(@Path("isbn") isbn: String): Response<RecognitionResponse>
 }

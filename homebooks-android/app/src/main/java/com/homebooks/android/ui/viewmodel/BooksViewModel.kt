@@ -111,4 +111,39 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    fun updateBook(
+        id: Int,
+        title: String,
+        author: String,
+        barcode: String?,
+        releaseDate: String,
+        description: String,
+        imageFiles: List<File>,
+        removedImages: List<String>,
+        onSuccess: () -> Unit
+    ) {
+        viewModelScope.launch {
+            val result = _repository.updateBook(id, title, author, barcode, releaseDate, description, imageFiles, removedImages)
+            result.onSuccess { book ->
+                _selectedBook.value = book
+                loadBooks()
+                onSuccess()
+            }.onFailure { exception ->
+                _error.value = exception.message ?: "Failed to update book"
+            }
+        }
+    }
+
+    fun searchByBarcode(isbn: String) {
+        _recognitionState.value = UiState.Loading
+        viewModelScope.launch {
+            val result = _repository.searchByBarcode(isbn)
+            result.onSuccess { books ->
+                _recognitionState.value = UiState.Success(books)
+            }.onFailure { exception ->
+                _recognitionState.value = UiState.Error(exception.message ?: "Barcode search failed")
+            }
+        }
+    }
 }

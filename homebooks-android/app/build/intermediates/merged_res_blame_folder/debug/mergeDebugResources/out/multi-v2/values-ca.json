@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.homebooks.android.app-mergeDebugResources-65:/values-ca/values-ca.xml",
+            "outputFile": "com.homebooks.android.app-mergeDebugResources-66:/values-ca/values-ca.xml",
             "map": [
                 {
                     "source": "/Users/sasha/.gradle/caches/9.6.0/transforms/cdd13975a24e3fcfd99ef27027605843/transformed/material-1.11.0/res/values-ca/values-ca.xml",
@@ -88,6 +88,23 @@
                         "startOffsets": "3956,4052,4154,4253,4350,4456,4561,15280",
                         "endColumns": "95,101,98,96,105,104,125,100",
                         "endOffsets": "4047,4149,4248,4345,4451,4556,4682,15376"
+                    }
+                },
+                {
+                    "source": "/Users/sasha/.gradle/caches/9.6.0/transforms/95864cf82cf96eb5649afd84f8f5aecf/transformed/zxing-android-embedded-4.3.0/res/values-ca/values-ca.xml",
+                    "from": {
+                        "startLines": "2,3,4,5",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "55,114,167,323",
+                        "endColumns": "58,52,155,112",
+                        "endOffsets": "109,162,318,431"
+                    },
+                    "to": {
+                        "startLines": "182,183,184,185",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "17110,17169,17222,17378",
+                        "endColumns": "58,52,155,112",
+                        "endOffsets": "17164,17217,17373,17486"
                     }
                 }
             ]

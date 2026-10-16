@@ -130,4 +130,58 @@ class BooksRepository(
             Result.failure(e)
         }
     }
+
+    suspend fun updateBook(
+        id: Int,
+        title: String,
+        author: String,
+        barcode: String?,
+        releaseDate: String,
+        description: String,
+        imageFiles: List<File>,
+        removedImages: List<String>
+    ): Result<Book> {
+        return try {
+            val bookJson = JSONObject().apply {
+                put("title", title)
+                put("author", author)
+                if (barcode != null && barcode.isNotBlank()) put("barcode", barcode)
+                put("release_date", releaseDate)
+                put("description", description)
+            }.toString()
+
+            val jsonBody = bookJson.toRequestBody("application/json".toMediaType())
+            val removedImagesJson = org.json.JSONArray(removedImages).toString().toRequestBody("application/json".toMediaType())
+
+            val imageParts = imageFiles.map { file ->
+                val requestBody = file.asRequestBody("image/*".toMediaType())
+                MultipartBody.Part.createFormData("images", file.name, requestBody)
+            }
+
+            val response = apiService.updateBook(id, jsonBody, imageParts, removedImagesJson)
+            if (response.isSuccessful) {
+                val book = response.body()?.book?.let { transformBook(it) } ?: throw Exception("Failed to update book")
+                Result.success(book)
+            } else {
+                val errorMsg = response.errorBody()?.string() ?: "Failed to update book: ${response.code()}"
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun searchByBarcode(isbn: String): Result<List<RecognizedBook>> {
+        return try {
+            val response = apiService.searchByBarcode(isbn)
+            if (response.isSuccessful) {
+                Result.success(response.body()?.books ?: emptyList())
+            } else {
+                val errorMsg = response.errorBody()?.string() ?: "Failed to search by barcode: ${response.code()}"
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

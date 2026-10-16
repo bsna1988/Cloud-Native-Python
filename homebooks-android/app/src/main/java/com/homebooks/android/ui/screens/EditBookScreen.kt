@@ -1,0 +1,309 @@
+package com.homebooks.android.ui.screens
+
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
+import coil.compose.AsyncImage
+import com.homebooks.android.ui.viewmodel.BooksViewModel
+import java.io.File
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditBookScreen(
+    bookId: Int,
+    viewModel: BooksViewModel,
+    onBookUpdated: () -> Unit,
+    onBackClick: () -> Unit
+) {
+    val context = LocalContext.current
+    val book by viewModel.selectedBook.observeAsState(null)
+
+    var title by remember { mutableStateOf("") }
+    var author by remember { mutableStateOf("") }
+    var barcode by remember { mutableStateOf("") }
+    var releaseDate by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+
+    var existingImages by remember { mutableStateOf<List<String>>(emptyList()) }
+    var removedImages by remember { mutableStateOf<List<String>>(emptyList()) }
+    var newFiles by remember { mutableStateOf<List<File>>(emptyList()) }
+    var newModels by remember { mutableStateOf<List<Any>>(emptyList()) }
+
+    var cameraFile by remember { mutableStateOf<File?>(null) }
+    val errorMessage by viewModel.error.observeAsState(null)
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(bookId) {
+        viewModel.loadBook(bookId)
+    }
+
+    LaunchedEffect(book) {
+        book?.let { b ->
+            title = b.title
+            author = b.author
+            barcode = b.barcode ?: ""
+            releaseDate = b.release_date
+            description = b.description
+            existingImages = b.images
+        }
+    }
+
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { msg ->
+            snackbarHostState.showSnackbar(msg)
+            viewModel.clearError()
+        }
+    }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            val files = uris.mapNotNull { uri ->
+                try {
+                    val inputStream = context.contentResolver.openInputStream(uri)
+                    val file = File(context.cacheDir, "book_img_${System.currentTimeMillis()}_${uri.lastPathSegment ?: "image"}.jpg")
+                    inputStream?.use { input ->
+                        file.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    file
+                } catch (_: Exception) {
+                    null
+                }
+            }
+            if (files.isNotEmpty()) {
+                newFiles = newFiles + files
+                newModels = newModels + uris
+            }
+        }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && cameraFile != null) {
+            val file = cameraFile!!
+            newFiles = newFiles + file
+            newModels = newModels + file
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Edit Book") },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            )
+        }
+    ) { paddingValues ->
+        if (book == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                if (existingImages.isNotEmpty()) {
+                    Text("Existing Images:", style = MaterialTheme.typography.titleSmall)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        existingImages.forEachIndexed { index, imageUrl ->
+                            Box(modifier = Modifier.size(90.dp)) {
+                                AsyncImage(
+                                    model = imageUrl,
+                                    contentDescription = "Existing Image",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                                IconButton(
+                                    onClick = {
+                                        removedImages = removedImages + imageUrl
+                                        existingImages = existingImages.toMutableList().apply { removeAt(index) }
+                                    },
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .size(24.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Remove existing image",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { imagePickerLauncher.launch("image/*") },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Add Gallery")
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            val file = File(context.cacheDir, "book_cam_${System.currentTimeMillis()}.jpg")
+                            cameraFile = file
+                            val uri = FileProvider.getUriForFile(
+                                context,
+                                "${context.packageName}.fileprovider",
+                                file
+                            )
+                            cameraLauncher.launch(uri)
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Add Camera")
+                    }
+                }
+
+                if (newModels.isNotEmpty()) {
+                    Text("New Images Added (${newModels.size}):", style = MaterialTheme.typography.titleSmall)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        newModels.forEachIndexed { index, model ->
+                            Box(modifier = Modifier.size(90.dp)) {
+                                AsyncImage(
+                                    model = model,
+                                    contentDescription = "New Image",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                                IconButton(
+                                    onClick = {
+                                        newFiles = newFiles.toMutableList().apply { removeAt(index) }
+                                        newModels = newModels.toMutableList().apply { removeAt(index) }
+                                    },
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .size(24.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Remove new image",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Title *") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = author,
+                    onValueChange = { author = it },
+                    label = { Text("Author *") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = barcode,
+                    onValueChange = { barcode = it },
+                    label = { Text("Barcode") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = releaseDate,
+                    onValueChange = { releaseDate = it },
+                    label = { Text("Release Date (YYYY-MM-DD)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Description") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3
+                )
+
+                Button(
+                    onClick = {
+                        if (title.isNotBlank() && author.isNotBlank()) {
+                            viewModel.updateBook(
+                                id = bookId,
+                                title = title,
+                                author = author,
+                                barcode = barcode.takeIf { it.isNotBlank() },
+                                releaseDate = releaseDate,
+                                description = description,
+                                imageFiles = newFiles,
+                                removedImages = removedImages
+                            ) {
+                                onBookUpdated()
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = title.isNotBlank() && author.isNotBlank()
+                ) {
+                    Text("Save Changes")
+                }
+            }
+        }
+    }
+}

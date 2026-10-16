@@ -1,7 +1,7 @@
 {
     "logs": [
         {
-            "outputFile": "com.homebooks.android.app-mergeDebugResources-65:/values-kk/values-kk.xml",
+            "outputFile": "com.homebooks.android.app-mergeDebugResources-66:/values-kk/values-kk.xml",
             "map": [
                 {
                     "source": "/Users/sasha/.gradle/caches/9.6.0/transforms/4085c7d37aec5c5a5db70cef0287f474/transformed/core-1.12.0/res/values-kk/values-kk.xml",

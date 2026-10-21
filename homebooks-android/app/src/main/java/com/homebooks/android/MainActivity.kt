@@ -16,6 +16,7 @@ import androidx.navigation.navArgument
 import com.homebooks.android.ui.screens.AddBookScreen
 import com.homebooks.android.ui.screens.BookDetailScreen
 import com.homebooks.android.ui.screens.BookListScreen
+import com.homebooks.android.ui.screens.ContinuousScanScreen
 import com.homebooks.android.ui.screens.EditBookScreen
 import com.homebooks.android.ui.screens.SplashScreen
 import com.homebooks.android.ui.theme.HomeBooksTheme
@@ -53,7 +54,16 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onAddClick = {
                                     navController.navigate("add_book")
+                                },
+                                onBulkScanClick = {
+                                    navController.navigate("continuous_scan")
                                 }
+                            )
+                        }
+                        composable("continuous_scan") {
+                            ContinuousScanScreen(
+                                viewModel = viewModel,
+                                onBackClick = { navController.popBackStack() }
                             )
                         }
                         composable(

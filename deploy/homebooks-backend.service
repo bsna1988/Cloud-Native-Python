@@ -5,6 +5,7 @@ After=network.target
 [Service]
 User=bsna1988
 WorkingDirectory=/home/bsna1988/Cloud-Native-Python/backend
+EnvironmentFile=-/etc/homebooks/homebooks-backend.env
 ExecStart=/home/bsna1988/Cloud-Native-Python/backend/.venv/bin/gunicorn --workers 3 --bind 0.0.0.0:5005 run:app
 Restart=always
 

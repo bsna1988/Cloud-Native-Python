@@ -12,7 +12,8 @@ release_date date,
 price decimal(5,2),
 publisher varchar(30),
 description varchar(100),
-thumbnail BLOB
+thumbnail BLOB,
+idempotency_key TEXT UNIQUE
 );
 
 CREATE TABLE book_images(

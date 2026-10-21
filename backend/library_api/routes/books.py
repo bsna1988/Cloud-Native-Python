@@ -6,6 +6,9 @@ from flask import Blueprint, jsonify, request, current_app
 from library_api.repositories.books import DuplicateBookError
 from library_api.services.books import create_book
 from library_api.services.recognition import recognize_image
+from library_api.services.recognition_strategies.base import (
+    RecognitionProviderError,
+)
 from library_api.services.books import (
     create_book,
     get_book as find_book,
@@ -90,6 +93,8 @@ def recognize_book():
 
     try:
         books = recognize_image(images)
+    except RecognitionProviderError as error:
+        return jsonify({"error": str(error)}), 503
     except ValueError as error:
         return jsonify({"error": str(error)}), 422
 

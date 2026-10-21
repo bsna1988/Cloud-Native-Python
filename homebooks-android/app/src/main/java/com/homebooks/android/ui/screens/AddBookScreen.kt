@@ -1,5 +1,7 @@
 package com.homebooks.android.ui.screens
 
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -37,6 +39,8 @@ fun AddBookScreen(
     onBackClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val activity = context as? Activity
+
     var title by remember { mutableStateOf("") }
     var author by remember { mutableStateOf("") }
     var barcode by remember { mutableStateOf("") }
@@ -192,12 +196,14 @@ fun AddBookScreen(
             // Scan Barcode Button
             Button(
                 onClick = {
+                    activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                     val options = ScanOptions().apply {
                         setDesiredBarcodeFormats(ScanOptions.ONE_D_CODE_TYPES)
                         setPrompt("Scan book barcode (ISBN)")
                         setCameraId(0)
                         setBeepEnabled(true)
                         setBarcodeImageEnabled(true)
+                        setOrientationLocked(true)
                     }
                     barcodeLauncher.launch(options)
                 },
@@ -350,17 +356,7 @@ fun AddBookScreen(
                                 description = description,
                                 imageFiles = selectedFiles
                             ) {
-                                val prefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
-                                val count = prefs.getInt("added_books_count", 0) + 1
-                                prefs.edit().putInt("added_books_count", count).apply()
-
-                                if (count % 5 == 0 && context is android.app.Activity) {
-                                    com.homebooks.android.util.AdManager.showAd(context) {
-                                        onBookAdded()
-                                    }
-                                } else {
-                                    onBookAdded()
-                                }
+                                onBookAdded()
                             }
                         }
                     },

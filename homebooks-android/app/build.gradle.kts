@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose") version "2.0.20"
+    id("com.google.devtools.ksp") version "2.0.20-1.0.24"
 }
 
 android {
@@ -77,6 +78,13 @@ dependencies {
 
     // Coil for image loading
     implementation("io.coil-kt:coil-compose:2.5.0")
+
+    // Room & WorkManager
+    val roomVersion = "2.6.1"
+    implementation("androidx.room:room-runtime:$roomVersion")
+    implementation("androidx.room:room-ktx:$roomVersion")
+    ksp("androidx.room:room-compiler:$roomVersion")
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

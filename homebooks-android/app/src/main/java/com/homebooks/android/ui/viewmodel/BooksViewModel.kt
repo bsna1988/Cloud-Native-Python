@@ -4,12 +4,33 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.homebooks.android.data.model.Book
 import com.homebooks.android.data.model.RecognizedBook
 import com.homebooks.android.data.repository.BooksRepository
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.UUID
+
+enum class ScanStatus {
+    LOOKING_UP,
+    ADDED,
+    ALREADY_EXISTS,
+    NOT_FOUND,
+    NETWORK_ERROR,
+    INVALID
+}
+
+data class ScanResultItem(
+    val id: String = UUID.randomUUID().toString(),
+    val isbn: String,
+    val title: String? = null,
+    val status: ScanStatus,
+    val timestamp: Long = System.currentTimeMillis()
+)
 
 sealed class UiState {
     object Idle : UiState()
@@ -38,15 +59,115 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
     private val _recognitionState = MutableLiveData<UiState>()
     val recognitionState: LiveData<UiState> get() = _recognitionState
 
-    fun loadBooks() {
-        _booksState.value = UiState.Loading
+    val pendingCount: LiveData<Int> = _repository.observePendingMutationsCount().asLiveData()
+
+    private val _continuousScanResults = MutableLiveData<List<ScanResultItem>>(emptyList())
+    val continuousScanResults: LiveData<List<ScanResultItem>> get() = _continuousScanResults
+
+    private val _activeScanStatus = MutableLiveData<ScanResultItem?>()
+    val activeScanStatus: LiveData<ScanResultItem?> get() = _activeScanStatus
+
+    private val processedSessionIsbns = mutableSetOf<String>()
+    private val scanQueue = Channel<String>(Channel.UNLIMITED)
+
+    init {
+        observeBooks()
+        loadBooks()
         viewModelScope.launch {
-            val result = _repository.getBooks()
-            result.onSuccess { books ->
-                _booksState.value = UiState.Success(books)
-            }.onFailure { exception ->
-                _booksState.value = UiState.Error(exception.message ?: "Unknown error")
+            for (isbn in scanQueue) {
+                processScanItem(isbn)
             }
+        }
+    }
+
+    private fun normalizeAndValidateIsbn(raw: String): String? {
+        if (raw.isBlank()) return null
+        val cleaned = raw.replace(Regex("[^0-9Xx]"), "").uppercase()
+        if (cleaned.length in 8..14) {
+            return cleaned
+        }
+        return null
+    }
+
+    fun enqueueScan(rawIsbn: String) {
+        val normalized = normalizeAndValidateIsbn(rawIsbn)
+        if (normalized == null) {
+            val item = ScanResultItem(isbn = rawIsbn, status = ScanStatus.INVALID)
+            emitScanResult(item)
+            return
+        }
+        if (processedSessionIsbns.contains(normalized)) {
+            return
+        }
+        processedSessionIsbns.add(normalized)
+
+        viewModelScope.launch {
+            scanQueue.send(normalized)
+        }
+    }
+
+    private fun emitScanResult(item: ScanResultItem) {
+        _activeScanStatus.postValue(item)
+        val currentList = _continuousScanResults.value.orEmpty()
+        _continuousScanResults.postValue(listOf(item) + currentList.take(49))
+    }
+
+    private suspend fun processScanItem(isbn: String) {
+        val lookingUpItem = ScanResultItem(isbn = isbn, status = ScanStatus.LOOKING_UP)
+        emitScanResult(lookingUpItem)
+
+        try {
+            val localBooks = _repository.getBooks().getOrNull() ?: emptyList()
+            val existsByBarcode = localBooks.any { it.barcode == isbn }
+            if (existsByBarcode) {
+                emitScanResult(ScanResultItem(isbn = isbn, status = ScanStatus.ALREADY_EXISTS))
+                return
+            }
+
+            val searchResult = _repository.searchByBarcode(isbn)
+            searchResult.onFailure {
+                emitScanResult(ScanResultItem(isbn = isbn, status = ScanStatus.NETWORK_ERROR))
+            }.onSuccess { recognizedBooks ->
+                val best = recognizedBooks.firstOrNull()
+                if (best == null || best.title.isNullOrBlank()) {
+                    emitScanResult(ScanResultItem(isbn = isbn, status = ScanStatus.NOT_FOUND))
+                } else {
+                    val existsByTitle = localBooks.any { it.title.equals(best.title, ignoreCase = true) }
+                    if (existsByTitle) {
+                        emitScanResult(ScanResultItem(isbn = isbn, title = best.title, status = ScanStatus.ALREADY_EXISTS))
+                    } else {
+                        val addResult = _repository.addBook(
+                            title = best.title ?: "Untitled",
+                            author = best.author ?: "Unknown Author",
+                            barcode = isbn,
+                            releaseDate = best.release_date ?: "",
+                            description = best.description ?: "",
+                            imageFiles = emptyList()
+                        )
+                        addResult.onSuccess {
+                            emitScanResult(ScanResultItem(isbn = isbn, title = best.title, status = ScanStatus.ADDED))
+                        }.onFailure {
+                            emitScanResult(ScanResultItem(isbn = isbn, title = best.title, status = ScanStatus.NETWORK_ERROR))
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            emitScanResult(ScanResultItem(isbn = isbn, status = ScanStatus.NETWORK_ERROR))
+        }
+    }
+
+    private fun observeBooks() {
+        viewModelScope.launch {
+            _repository.observeBooks().collectLatest { books ->
+                _booksState.value = UiState.Success(books)
+            }
+        }
+    }
+
+    fun loadBooks() {
+        viewModelScope.launch {
+            _repository.getBooks()
         }
     }
 
@@ -72,8 +193,7 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
     ) {
         viewModelScope.launch {
             val result = _repository.addBook(title, author, barcode, releaseDate, description, imageFiles)
-            result.onSuccess { book ->
-                loadBooks()
+            result.onSuccess {
                 onSuccess()
             }.onFailure { exception ->
                 _error.value = exception.message ?: "Failed to add book"
@@ -104,9 +224,7 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteBook(id: Int) {
         viewModelScope.launch {
             val result = _repository.deleteBook(id)
-            result.onSuccess {
-                loadBooks()
-            }.onFailure { exception ->
+            result.onFailure { exception ->
                 _error.value = exception.message ?: "Failed to delete book"
             }
         }
@@ -127,7 +245,6 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
             val result = _repository.updateBook(id, title, author, barcode, releaseDate, description, imageFiles, removedImages)
             result.onSuccess { book ->
                 _selectedBook.value = book
-                loadBooks()
                 onSuccess()
             }.onFailure { exception ->
                 _error.value = exception.message ?: "Failed to update book"

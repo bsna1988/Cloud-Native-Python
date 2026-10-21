@@ -7,8 +7,11 @@ from PIL import Image, ImageOps
 
 from library_api.services.recognition_strategies import (
     BarcodeRecognitionStrategy,
-    LmStudioVisionRecognitionStrategy,
+    OpenRouterVisionRecognitionStrategy,
     RecognitionStrategy,
+)
+from library_api.services.recognition_strategies.base import (
+    RecognitionProviderError,
 )
 
 __all__ = [
@@ -21,7 +24,7 @@ class RecognitionPipeline:
     def __init__(self):
         self.strategies = [
             BarcodeRecognitionStrategy(),
-            LmStudioVisionRecognitionStrategy(),
+            OpenRouterVisionRecognitionStrategy(),
         ]
 
     def register_strategy(self, strategy: RecognitionStrategy):
@@ -45,17 +48,30 @@ class RecognitionPipeline:
 
         # Run secondary strategies (to fill gaps)
         secondary_results = None
-        for strategy in self.strategies:
-            if not strategy.is_primary:
-                try:
-                    result = strategy.recognize(uploaded_files, temp_paths)
-                    if result:
-                        secondary_results = result
-                        break
-                except Exception:
-                    current_app.logger.exception(
-                        f"Secondary recognition strategy '{strategy.name}' failed"
-                    )
+        provider_error = None
+        needs_secondary = not primary_results or any(
+            not book.get("title") or not book.get("author")
+            for book in primary_results
+        )
+        if needs_secondary:
+            for strategy in self.strategies:
+                if not strategy.is_primary:
+                    try:
+                        result = strategy.recognize(uploaded_files, temp_paths)
+                        if result:
+                            secondary_results = result
+                            break
+                    except RecognitionProviderError as error:
+                        provider_error = error
+                        current_app.logger.warning(
+                            "Secondary recognition strategy '%s' unavailable: %s",
+                            strategy.name,
+                            error,
+                        )
+                    except Exception:
+                        current_app.logger.exception(
+                            f"Secondary recognition strategy '{strategy.name}' failed"
+                        )
 
         if primary_results:
             if secondary_results and len(secondary_results) > 0:
@@ -71,6 +87,9 @@ class RecognitionPipeline:
 
         if secondary_results:
             return secondary_results
+
+        if provider_error:
+            raise provider_error
 
         raise ValueError("Could not recognize book from images")
 

@@ -45,6 +45,26 @@ graph TD
 
 ---
 
+## 📱 Offline-First Architecture (ADR 0002)
+
+The Android app implements an offline-first architecture for robust usage without network connectivity:
+- **Local Source of Truth:** Room database caches books, sync states, and image attachments locally so reads and writes happen instantly without waiting for the server.
+- **Outbox Pattern & WorkManager:** Pending mutations (`CREATE`, `UPDATE`, `DELETE`) are queued locally in Room and synchronized sequentially using WorkManager with network constraints.
+- **Idempotency Keys:** Client-generated stable UUIDs are sent as `idempotency_key` on create requests to guarantee duplicate-free retries.
+- **Conflict Policy:** Last-writer-wins at the book-record level upon reconnection, with visible sync status indicators in the UI.
+
+---
+
+## 📷 Continuous Barcode Scanning for Bulk Entry (ADR 0003)
+
+The Android app features a dedicated continuous scanning mode for fast, uninterrupted bulk library entry:
+- **Continuous Camera Session:** Powered by ZXing Android Embedded in a locked portrait orientation.
+- **Session Suppression & Duplicate Checks:** Suppresses repeat frame detections during the session and checks local Room storage to skip books already present.
+- **Automatic Metadata & Offline Queuing:** Automatically looks up book metadata via the backend barcode endpoint and queues successful lookups for offline-first synchronization.
+- **Live Status Feedback:** Displays real-time scan status overlay ("Added", "Already exists", "Not found") while keeping the camera active for continuous scanning.
+
+---
+
 ## 🔒 Security & Authentication
 
 - **API Key Header Authentication (`X-API-Key`):**
@@ -145,6 +165,36 @@ cd /home/pi/Cloud-Native-Python
 sudo cp deploy/homebooks-backend.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now homebooks-backend
+```
+
+### Configure OpenRouter Image Recognition (Raspberry Pi)
+Image recognition uses OpenRouter from the backend. Configure the API key on the
+Raspberry Pi in a root-owned environment file; do not commit the key or put it
+in the Android or frontend application.
+
+```bash
+sudo install -d -m 700 /etc/homebooks
+sudo install -m 600 /dev/null /etc/homebooks/homebooks-backend.env
+sudoedit /etc/homebooks/homebooks-backend.env
+```
+
+Add the following entries, replacing the placeholder with your OpenRouter API
+key:
+
+```dotenv
+OPENROUTER_API_KEY=your_openrouter_api_key
+OPENROUTER_MODEL=nvidia/nemotron-3.5-super-vl:free
+```
+
+The configured model must support image input and have a `:free` model ID.
+OpenRouter's free model availability and rate limits can change, so confirm the
+model is currently available before deploying. Restart the service to load the
+settings:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart homebooks-backend
+sudo systemctl status homebooks-backend --no-pager
 ```
 
 ### Viewing Backend Logs (Raspberry Pi)

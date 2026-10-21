@@ -74,7 +74,8 @@ class IsbnRecognitionTests(unittest.TestCase):
                             author varchar(30),
                             release_date date,
                             description varchar(100),
-                            thumbnail BLOB
+                            thumbnail BLOB,
+                            idempotency_key varchar(100) UNIQUE
                         );
                         CREATE TABLE book_images (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,10 +1,10 @@
 {
     "logs": [
         {
-            "outputFile": "com.homebooks.android.app-mergeDebugResources-75:/values-h550dp-port-v13/values-h550dp-port-v13.xml",
+            "outputFile": "com.homebooks.android.app-mergeDebugResources-80:/values-h550dp-port-v13/values-h550dp-port-v13.xml",
             "map": [
                 {
-                    "source": "/Users/sasha/.gradle/caches/9.6.0/transforms/cdd13975a24e3fcfd99ef27027605843/transformed/material-1.11.0/res/values-h550dp-port-v13/values-h550dp-port-v13.xml",
+                    "source": "/Users/sasha/.gradle/caches/9.6.0/transforms/1c690dcdd91d8feb53da5318ce66c2de/transformed/material-1.11.0/res/values-h550dp-port-v13/values-h550dp-port-v13.xml",
                     "from": {
                         "startLines": "2",
                         "startColumns": "4",

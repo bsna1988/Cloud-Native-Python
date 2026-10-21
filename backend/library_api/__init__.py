@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from flask import Flask, send_from_directory
@@ -15,8 +16,8 @@ def create_app(test_config=None):
         DATABASE=str(project_root / "books.db"),
         UPLOAD_FOLDER=str(project_root / "uploads"),
         MAX_CONTENT_LENGTH=16 * 1024 * 1024,
-        LM_STUDIO_BASE_URL="http:// 192.168.178.33:1234/v1",
-        LM_STUDIO_MODEL="google/gemma-3-4b",
+        OPENROUTER_API_KEY=os.environ.get("OPENROUTER_API_KEY", ""),
+        OPENROUTER_MODEL=os.environ.get("OPENROUTER_MODEL", ""),
         API_KEY="homebooks_secret_key_12345",
     )
 

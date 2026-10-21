@@ -10,6 +10,11 @@ def database_connection():
     connection.execute("PRAGMA foreign_keys = ON")
 
     try:
+        try:
+            connection.execute("ALTER TABLE book ADD COLUMN idempotency_key TEXT UNIQUE")
+            connection.commit()
+        except sqlite3.OperationalError:
+            pass
         yield connection
         connection.commit()
     except Exception:

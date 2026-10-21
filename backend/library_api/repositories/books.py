@@ -7,8 +7,17 @@ class DuplicateBookError(Exception):
 
 def create_book(book, image_urls):
     thumbnail = image_urls[0] if image_urls else None
+    idempotency_key = book.get("idempotency_key")
 
     with database_connection() as connection:
+        if idempotency_key:
+            existing_by_key = connection.execute(
+                "SELECT id FROM book WHERE idempotency_key = ?",
+                (idempotency_key,),
+            ).fetchone()
+            if existing_by_key:
+                return get_book(existing_by_key["id"])
+
         existing = connection.execute(
             "SELECT id FROM book WHERE title = ?",
             (book["title"],),
@@ -20,8 +29,8 @@ def create_book(book, image_urls):
         cursor = connection.execute(
             """
             INSERT INTO book
-                (barcode, title, author, release_date, description, thumbnail)
-            VALUES (?, ?, ?, ?, ?, ?)
+                (barcode, title, author, release_date, description, thumbnail, idempotency_key)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 book.get("barcode"),
@@ -30,6 +39,7 @@ def create_book(book, image_urls):
                 book.get("release_date", ""),
                 book.get("description", ""),
                 thumbnail,
+                idempotency_key,
             ),
         )
         book_id = cursor.lastrowid

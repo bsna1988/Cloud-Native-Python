@@ -27,10 +27,12 @@ import com.homebooks.android.ui.viewmodel.UiState
 fun BookListScreen(
     viewModel: BooksViewModel,
     onBookClick: (Int) -> Unit,
-    onAddClick: () -> Unit
+    onAddClick: () -> Unit,
+    onBulkScanClick: () -> Unit
 ) {
     val booksState by viewModel.booksState.observeAsState(UiState.Loading)
     val errorMessage by viewModel.error.observeAsState(null)
+    val pendingCount by viewModel.pendingCount.observeAsState(0)
     var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
@@ -41,6 +43,11 @@ fun BookListScreen(
         topBar = {
             TopAppBar(
                 title = { Text(text = "HomeBooks") },
+                actions = {
+                    TextButton(onClick = onBulkScanClick) {
+                        Text("Bulk Scan", color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -67,6 +74,26 @@ fun BookListScreen(
                     .padding(16.dp),
                 singleLine = true
             )
+
+            if (pendingCount > 0) {
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Pending offline changes ($pendingCount). Syncing...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
+            }
 
             Box(
                 modifier = Modifier

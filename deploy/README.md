@@ -43,11 +43,28 @@ cd ..
 ### 4. Install and Start the Systemd Backend Service
 This ensures Flask (which serves both the API and built frontend on port `5005`) runs in the background and restarts automatically on system boot:
 ```bash
+# Configure OpenRouter credentials outside the repository. Keep this file
+# readable only by root; systemd reads it before dropping privileges to the
+# service user.
+sudo install -d -m 700 /etc/homebooks
+sudo install -m 600 /dev/null /etc/homebooks/homebooks-backend.env
+sudoedit /etc/homebooks/homebooks-backend.env
+# Add:
+# OPENROUTER_API_KEY=your_openrouter_api_key
+# OPENROUTER_MODEL=nvidia/nemotron-3.5-super-vl:free
+
 sudo cp deploy/homebooks-backend.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable homebooks-backend
 sudo systemctl start homebooks-backend
 ```
+
+The key is used only by the backend and must not be committed or added to the
+Android or frontend application. The default model is a free-tier vision model;
+free model IDs, availability, and rate limits can change. Confirm the
+configured OpenRouter model is currently free and supports image input before
+changing `OPENROUTER_MODEL`. Recognition sends uploaded book-cover images to
+OpenRouter for processing.
 
 Verify service status:
 ```bash

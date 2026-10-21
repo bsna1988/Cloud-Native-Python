@@ -5,8 +5,17 @@ import unittest
 from contextlib import closing
 from io import BytesIO
 from pathlib import Path
+from PIL import Image
 
 from library_api import create_app
+
+
+def generate_test_jpeg():
+    img = Image.new("RGB", (100, 100), color="red")
+    buf = BytesIO()
+    img.save(buf, "JPEG")
+    buf.seek(0)
+    return buf
 
 
 class BooksApiTests(unittest.TestCase):
@@ -27,15 +36,16 @@ class BooksApiTests(unittest.TestCase):
             "UPLOAD_FOLDER": str(directory / "uploads"),
         })
         self.client = app.test_client()
+        self.headers = {"X-API-Key": "homebooks_secret_key_12345"}
 
     def test_get_books_returns_empty_list(self):
-        response = self.client.get("/api/v1/books")
+        response = self.client.get("/api/v1/books", headers=self.headers)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.get_json(), {"books": []})
 
     def test_get_missing_book_returns_not_found(self):
-        response = self.client.get("/api/v1/books/1")
+        response = self.client.get("/api/v1/books/1", headers=self.headers)
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.get_json(), {"error": "Book not found"})
@@ -52,11 +62,12 @@ class BooksApiTests(unittest.TestCase):
                     "description": "A test description.",
                 }),
                 "images": [
-                    (BytesIO(b"cover image"), "cover.jpg"),
-                    (BytesIO(b"back image"), "back.jpg"),
+                    (generate_test_jpeg(), "cover.jpg"),
+                    (generate_test_jpeg(), "back.jpg"),
                 ],
             },
             content_type="multipart/form-data",
+            headers=self.headers,
         )
 
         self.assertEqual(response.status_code, 201)
@@ -66,7 +77,8 @@ class BooksApiTests(unittest.TestCase):
         self.assertEqual(len(created_book["images"]), 2)
 
         details_response = self.client.get(
-            f"/api/v1/books/{created_book['id']}"
+            f"/api/v1/books/{created_book['id']}",
+            headers=self.headers,
         )
 
         self.assertEqual(details_response.status_code, 200)
@@ -75,12 +87,13 @@ class BooksApiTests(unittest.TestCase):
     def test_create_duplicate_book_returns_conflict(self):
         data = {
             "book": json.dumps({"title": "Test Book", "author": "Test Author"}),
-            "images": (BytesIO(b"cover image"), "cover.jpg"),
+            "images": (generate_test_jpeg(), "cover.jpg"),
         }
         first_response = self.client.post(
             "/api/v1/books",
             data=data,
             content_type="multipart/form-data",
+            headers=self.headers,
         )
         self.assertEqual(first_response.status_code, 201)
 
@@ -91,9 +104,10 @@ class BooksApiTests(unittest.TestCase):
                     "title": "Test Book",
                     "author": "Another Author",
                 }),
-                "images": (BytesIO(b"another cover"), "another.jpg"),
+                "images": (generate_test_jpeg(), "another.jpg"),
             },
             content_type="multipart/form-data",
+            headers=self.headers,
         )
 
         self.assertEqual(duplicate_response.status_code, 409)
@@ -109,10 +123,48 @@ class BooksApiTests(unittest.TestCase):
                 "book": json.dumps({"title": "Test Book", "author": "Test Author"}),
             },
             content_type="multipart/form-data",
+            headers=self.headers,
         )
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.get_json(), {"error": "Upload at least one image"})
+
+    def test_create_book_with_idempotency_key_returns_existing_on_retry(self):
+        idempotency_key = "uuid-12345-test"
+        data = {
+            "book": json.dumps({
+                "title": "Idempotent Book",
+                "author": "Author",
+                "idempotency_key": idempotency_key,
+            }),
+            "images": (generate_test_jpeg(), "cover.jpg"),
+        }
+        first_response = self.client.post(
+            "/api/v1/books",
+            data=data,
+            content_type="multipart/form-data",
+            headers=self.headers,
+        )
+        self.assertEqual(first_response.status_code, 201)
+        book1 = first_response.get_json()["book"]
+
+        retry_response = self.client.post(
+            "/api/v1/books",
+            data={
+                "book": json.dumps({
+                    "title": "Different Title",
+                    "author": "Different Author",
+                    "idempotency_key": idempotency_key,
+                }),
+                "images": (generate_test_jpeg(), "another.jpg"),
+            },
+            content_type="multipart/form-data",
+            headers=self.headers,
+        )
+        self.assertEqual(retry_response.status_code, 201)
+        book2 = retry_response.get_json()["book"]
+        self.assertEqual(book1["id"], book2["id"])
+        self.assertEqual(book1["title"], book2["title"])
 
 
 if __name__ == "__main__":

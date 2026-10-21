@@ -78,7 +78,8 @@ fun EditBookScreen(
             val files = uris.mapNotNull { uri ->
                 try {
                     val inputStream = context.contentResolver.openInputStream(uri)
-                    val file = File(context.cacheDir, "book_img_${System.currentTimeMillis()}_${uri.lastPathSegment ?: "image"}.jpg")
+                    val imagesDir = File(context.filesDir, "book_images").apply { mkdirs() }
+                    val file = File(imagesDir, "book_img_${System.currentTimeMillis()}_${uri.lastPathSegment ?: "image"}.jpg")
                     inputStream?.use { input ->
                         file.outputStream().use { output ->
                             input.copyTo(output)
@@ -192,7 +193,8 @@ fun EditBookScreen(
 
                     OutlinedButton(
                         onClick = {
-                            val file = File(context.cacheDir, "book_cam_${System.currentTimeMillis()}.jpg")
+                            val imagesDir = File(context.filesDir, "book_images").apply { mkdirs() }
+                        val file = File(imagesDir, "book_cam_${System.currentTimeMillis()}.jpg")
                             cameraFile = file
                             val uri = FileProvider.getUriForFile(
                                 context,

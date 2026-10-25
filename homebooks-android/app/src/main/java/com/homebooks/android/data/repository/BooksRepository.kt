@@ -299,6 +299,10 @@ class BooksRepository(
         return pendingMutationDao.observeAllMutations().map { it.size }
     }
 
+    fun triggerImmediateSync() {
+        scheduleSync()
+    }
+
     private fun scheduleSync() {
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)

@@ -5,7 +5,7 @@ REPO_DIR="/home/bsna1988/Cloud-Native-Python"
 cd "$REPO_DIR"
 
 echo "Pulling latest changes from GitHub..."
-git pull origin main
+git pull origin master
 
 echo "Building frontend with Vite..."
 cd frontend

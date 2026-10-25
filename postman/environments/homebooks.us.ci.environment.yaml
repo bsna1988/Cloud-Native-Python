@@ -1,0 +1,6 @@
+name: homebooks.us.ci
+values:
+  - key: host
+    value: ''
+  - key: key
+    value: ''

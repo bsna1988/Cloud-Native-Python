@@ -163,7 +163,7 @@ fun BookListScreen(
                             modifier = Modifier.weight(1f)
                         )
                         TextButton(onClick = {
-                            viewModel.loadBooks()
+                            viewModel.syncNow()
                         }) {
                             Text("Sync Now")
                         }

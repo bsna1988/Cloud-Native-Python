@@ -20,19 +20,25 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
     private val db = AppDatabase.getInstance(context)
     private val bookDao = db.bookDao()
     private val pendingMutationDao = db.pendingMutationDao()
-    private val apiService = RetrofitClient.createService()
+    private val prefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+    private val baseUrl = prefs.getString("api_base_url", com.homebooks.android.data.api.ApiConstants.BASE_URL) ?: com.homebooks.android.data.api.ApiConstants.BASE_URL
+    private val apiService = RetrofitClient.createService(baseUrl)
     private val gson = Gson()
 
     override suspend fun doWork(): Result {
+        android.util.Log.d("SyncWorker", "Starting sync work with base URL: $baseUrl")
         return try {
             val mutations = pendingMutationDao.getAllMutations()
+            android.util.Log.d("SyncWorker", "Found ${mutations.size} pending mutations to sync.")
             for (mutation in mutations) {
                 val book = bookDao.getBookByUuid(mutation.bookUuid)
                 if (book == null && mutation.operationType != "DELETE") {
+                    android.util.Log.d("SyncWorker", "Book not found for mutation ${mutation.id}, deleting mutation.")
                     pendingMutationDao.deleteMutation(mutation)
                     continue
                 }
 
+                android.util.Log.d("SyncWorker", "Processing mutation type ${mutation.operationType} for book UUID ${mutation.bookUuid}")
                 val success = when (mutation.operationType) {
                     "CREATE" -> syncCreate(mutation, book)
                     "UPDATE" -> syncUpdate(mutation, book)
@@ -41,13 +47,20 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
                 }
 
                 if (!success) {
+                    android.util.Log.w("SyncWorker", "Mutation ${mutation.operationType} failed, scheduling retry.")
                     return Result.retry()
                 }
             }
 
+            android.util.Log.d("SyncWorker", "Mutations synced successfully. Reconciling server library...")
             syncAndReconcileServerLibrary()
+            android.util.Log.d("SyncWorker", "Sync work completed successfully.")
             Result.success()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            android.util.Log.w("SyncWorker", "Sync work cancelled", e)
+            throw e
         } catch (e: Exception) {
+            android.util.Log.e("SyncWorker", "Sync work encountered exception, retrying", e)
             e.printStackTrace()
             Result.retry()
         }
@@ -92,14 +105,23 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
                     )
                     bookDao.updateBook(updatedEntity)
                     pendingMutationDao.deleteMutation(mutation)
+                    android.util.Log.d("SyncWorker", "CREATE successful for book UUID ${book.uuid}, serverId=${serverBook.id}")
                     return true
+                } else {
+                    android.util.Log.w("SyncWorker", "CREATE response successful but serverBook or serverId is null. Body: ${response.body()}")
                 }
             } else if (response.code() == 409 || response.code() == 201) {
+                android.util.Log.d("SyncWorker", "CREATE handled status code ${response.code()}, removing mutation.")
                 pendingMutationDao.deleteMutation(mutation)
                 return true
+            } else {
+                val errorBodyStr = response.errorBody()?.string() ?: "No error body"
+                android.util.Log.e("SyncWorker", "CREATE failed with HTTP code ${response.code()}, error: $errorBodyStr")
             }
             return false
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            android.util.Log.e("SyncWorker", "CREATE threw exception", e)
             e.printStackTrace()
             return false
         }
@@ -107,6 +129,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
 
     private suspend fun syncUpdate(mutation: com.homebooks.android.data.local.entity.PendingMutationEntity, book: BookEntity?): Boolean {
         if (book == null || book.serverId == null) {
+            android.util.Log.w("SyncWorker", "UPDATE skipped: book or serverId is null")
             return false
         }
 
@@ -151,10 +174,16 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
                     bookDao.updateBook(book.copy(syncState = "SYNCED"))
                 }
                 pendingMutationDao.deleteMutation(mutation)
+                android.util.Log.d("SyncWorker", "UPDATE successful for book serverId=${book.serverId}")
                 return true
+            } else {
+                val errorBodyStr = response.errorBody()?.string() ?: "No error body"
+                android.util.Log.e("SyncWorker", "UPDATE failed with HTTP code ${response.code()}, error: $errorBodyStr")
             }
             return false
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            android.util.Log.e("SyncWorker", "UPDATE threw exception", e)
             e.printStackTrace()
             return false
         }
@@ -163,14 +192,22 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
     private suspend fun syncDelete(mutation: com.homebooks.android.data.local.entity.PendingMutationEntity, book: BookEntity?): Boolean {
         try {
             if (book != null && book.serverId != null) {
-                apiService.deleteBook(book.serverId)
+                val response = apiService.deleteBook(book.serverId)
+                if (!response.isSuccessful && response.code() != 404) {
+                    val errorBodyStr = response.errorBody()?.string() ?: "No error body"
+                    android.util.Log.e("SyncWorker", "DELETE failed with HTTP code ${response.code()}, error: $errorBodyStr")
+                    return false
+                }
             }
             if (book != null) {
                 bookDao.deleteBookByUuid(book.uuid)
             }
             pendingMutationDao.deleteMutation(mutation)
+            android.util.Log.d("SyncWorker", "DELETE successful for mutation ${mutation.id}")
             return true
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            android.util.Log.e("SyncWorker", "DELETE threw exception", e)
             e.printStackTrace()
             return false
         }
@@ -181,6 +218,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
             val response = apiService.getBooks()
             if (response.isSuccessful) {
                 val serverBooks = response.body()?.books ?: emptyList()
+                android.util.Log.d("SyncWorker", "Reconciliation fetched ${serverBooks.size} books from server.")
                 for (serverBook in serverBooks) {
                     if (serverBook.id == null) continue
                     val existingByServerId = bookDao.getBookByServerId(serverBook.id)
@@ -213,8 +251,13 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
                         bookDao.insertBook(newEntity)
                     }
                 }
+            } else {
+                val errorBodyStr = response.errorBody()?.string() ?: "No error body"
+                android.util.Log.e("SyncWorker", "Reconciliation getBooks failed with HTTP code ${response.code()}, error: $errorBodyStr")
             }
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            android.util.Log.e("SyncWorker", "Reconciliation threw exception", e)
             e.printStackTrace()
         }
     }

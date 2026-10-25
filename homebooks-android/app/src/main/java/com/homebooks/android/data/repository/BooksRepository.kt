@@ -69,7 +69,6 @@ class BooksRepository(
 
     suspend fun getBooks(): Result<List<Book>> {
         return try {
-            scheduleSync()
             val entities = bookDao.getBooksList()
             Result.success(entities.map { entityToModel(it) })
         } catch (e: Exception) {
@@ -300,10 +299,12 @@ class BooksRepository(
     }
 
     fun triggerImmediateSync() {
+        android.util.Log.d("BooksRepository", "Sync Now clicked! Forcing immediate sync enqueue.")
         scheduleSync()
     }
 
     private fun scheduleSync() {
+        android.util.Log.d("BooksRepository", "Scheduling sync work request with REPLACE policy.")
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()

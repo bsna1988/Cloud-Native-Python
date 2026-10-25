@@ -1,1 +1,8 @@
 $kind: collection
+auth:
+  - id: fddc0707-3eaf-410f-a5d3-2d262acbbb46
+    type: apikey
+    name: API Key
+    credentials:
+      key: X-API-Key
+      value: "{{key}}"

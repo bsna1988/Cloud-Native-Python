@@ -161,6 +161,57 @@ class OpenRouterRecognitionTests(unittest.TestCase):
                 [], [str(self.image_path)]
             )
 
+    def test_parses_text_blocks_in_openrouter_content_array(self):
+        response = self.make_response([
+            {"type": "text", "text": '{"title": "Test Book",'},
+            {"type": "image", "image_url": "ignored"},
+            {"type": "text", "text": '"author": "A. Writer"}'},
+        ])
+
+        with (
+            self.app.app_context(),
+            patch(
+                "library_api.services.recognition_strategies.openrouter.requests.post",
+                return_value=response,
+            ),
+            patch(
+                "library_api.services.recognition_strategies.openrouter.query_book_metadata",
+                return_value=[],
+            ),
+        ):
+            result = OpenRouterVisionRecognitionStrategy().recognize(
+                [], [str(self.image_path)]
+            )
+
+        self.assertEqual(
+            result,
+            [{
+                "title": "Test Book",
+                "author": "A. Writer",
+                "barcode": "",
+            }],
+        )
+
+    def test_reports_clear_error_when_openrouter_has_no_text_blocks(self):
+        response = self.make_response([
+            {"type": "image", "image_url": "ignored"},
+        ])
+
+        with (
+            self.app.app_context(),
+            patch(
+                "library_api.services.recognition_strategies.openrouter.requests.post",
+                return_value=response,
+            ),
+            self.assertRaisesRegex(
+                RecognitionProviderError,
+                "unsupported content format",
+            ),
+        ):
+            OpenRouterVisionRecognitionStrategy().recognize(
+                [], [str(self.image_path)]
+            )
+
     def test_does_not_call_catalog_for_author_only_result(self):
         response = self.make_response('{"title": "", "author": "A. Writer"}')
 

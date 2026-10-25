@@ -293,4 +293,9 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    fun syncNow() {
+        _repository.triggerImmediateSync()
+        loadBooks()
+    }
 }

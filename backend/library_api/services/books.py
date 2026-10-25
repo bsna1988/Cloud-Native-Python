@@ -40,8 +40,6 @@ def create_book(book, uploaded_files):
         raise ValueError("Title is required")
     if not book.get("author", "").strip():
         raise ValueError("Author is required")
-    if not uploaded_files:
-        raise ValueError("Upload at least one image")
 
     upload_folder = Path(current_app.config["UPLOAD_FOLDER"])
     saved_paths = []

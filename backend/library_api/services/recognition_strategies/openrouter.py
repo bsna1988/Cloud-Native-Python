@@ -154,11 +154,28 @@ class OpenRouterVisionRecognitionStrategy(RecognitionStrategy):
                 "OpenRouter returned an invalid chat-completion response."
             ) from error
 
-        if not isinstance(content, str):
+        if isinstance(content, str):
+            return content
+
+        if isinstance(content, list):
+            text_parts = [
+                part["text"]
+                for part in content
+                if isinstance(part, dict)
+                and part.get("type") == "text"
+                and isinstance(part.get("text"), str)
+            ]
+            if text_parts:
+                return "\n".join(text_parts)
+
+        if content is None:
             raise RecognitionProviderError(
-                "OpenRouter returned non-text book metadata."
+                "OpenRouter returned no text for book metadata. "
+                "Check the selected model's response format."
             )
-        return content
+        raise RecognitionProviderError(
+            "OpenRouter returned book metadata in an unsupported content format."
+        )
 
     @staticmethod
     def _parse_book_data(response_content):

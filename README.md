@@ -196,10 +196,11 @@ OPENROUTER_API_KEY=your_openrouter_api_key
 OPENROUTER_MODEL=nvidia/nemotron-3.5-super-vl:free
 ```
 
-The configured model must support image input and have a `:free` model ID.
-OpenRouter's free model availability and rate limits can change, so confirm the
-model is currently available before deploying. Restart the service to load the
-settings:
+`OPENROUTER_MODEL` may be `openrouter/free` or a specific free model ID ending
+in `:free`. The free router selects an available free model that supports image
+input and structured JSON output; a specific model must support those features
+itself. Free model availability and rate limits can change. Restart the service
+to load the settings:
 
 ```bash
 sudo systemctl daemon-reload

@@ -60,11 +60,11 @@ sudo systemctl start homebooks-backend
 ```
 
 The key is used only by the backend and must not be committed or added to the
-Android or frontend application. The default model is a free-tier vision model;
-free model IDs, availability, and rate limits can change. Confirm the
-configured OpenRouter model is currently free and supports image input before
-changing `OPENROUTER_MODEL`. Recognition sends uploaded book-cover images to
-OpenRouter for processing.
+Android or frontend application. `OPENROUTER_MODEL` may be `openrouter/free`,
+which selects an available free model supporting image input and structured
+JSON output, or a specific free vision model ID ending in `:free`. Free model
+availability and rate limits can change. Recognition sends uploaded book-cover
+images to OpenRouter for processing and requests JSON-formatted output.
 
 The provided Gunicorn service runs one worker with three threads
 (`--workers 1 --worker-class gthread --threads 3`). A worker is a separate

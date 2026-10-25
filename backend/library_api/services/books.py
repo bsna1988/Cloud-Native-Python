@@ -38,8 +38,9 @@ def optimize_image(input_path, output_path, max_dimension=1200, quality=80):
 def create_book(book, uploaded_files):
     if not book.get("title", "").strip():
         raise ValueError("Title is required")
-    if not book.get("author", "").strip():
-        raise ValueError("Author is required")
+    author = book.get("author")
+    if not isinstance(author, str) or not author.strip():
+        book["author"] = "Unknown"
 
     upload_folder = Path(current_app.config["UPLOAD_FOLDER"])
     saved_paths = []

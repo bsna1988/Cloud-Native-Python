@@ -14,6 +14,7 @@ from library_api.services.recognition_strategies import (
     OpenRouterVisionRecognitionStrategy,
     RecognitionStrategy,
 )
+from library_api.services.recognition_strategies.openrouter import validate_free_model
 from library_api.services.recognition_strategies.base import (
     RecognitionProviderError,
 )
@@ -151,22 +152,18 @@ class OpenRouterShelfRecognitionStrategy:
             )
 
         model = current_app.config["OPENROUTER_MODEL"]
-        if not isinstance(model, str) or not model:
-            raise RecognitionProviderError(
-                "Image recognition is unavailable: OPENROUTER_MODEL is not configured."
-            )
-        if not model.endswith(":free"):
-            raise RecognitionProviderError(
-                "Image recognition requires an OpenRouter model ID ending in ':free'."
-            )
+        validate_free_model(model)
 
         content = [
             {
                 "type": "text",
                 "text": (
-                    "Read the bookshelf image. Detect multiple books visible on the shelf "
-                    "and return a JSON list (array) of objects, each with 'title' and 'author' "
-                    "string fields. Use empty strings for unreadable fields; do not guess or invent books."
+                    "Inspect the bookshelf image and identify each distinct book whose "
+                    "cover is visible. Return one JSON object with a 'books' array; each "
+                    "item must have 'title' and 'author' string fields. Transcribe only "
+                    "text that is readable on the covers. Use empty strings for unreadable "
+                    "authors, omit objects whose titles cannot be read, and do not guess "
+                    "or invent books. Do not include markdown."
                 ),
             }
         ]
@@ -182,7 +179,12 @@ class OpenRouterShelfRecognitionStrategy:
                 },
             })
 
-        response = OpenRouterVisionRecognitionStrategy._request(api_key, model, content)
+        response = OpenRouterVisionRecognitionStrategy._request(
+            api_key,
+            model,
+            content,
+            response_format={"type": "json_object"},
+        )
         response_content = OpenRouterVisionRecognitionStrategy._extract_response_content(response)
         candidates = self._parse_shelf_data(response_content)
 

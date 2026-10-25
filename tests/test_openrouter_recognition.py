@@ -58,6 +58,7 @@ class OpenRouterRecognitionTests(unittest.TestCase):
                 return_value=[],
             ),
         ):
+            self.app.config["OPENROUTER_MODEL"] = "openrouter/free"
             result = OpenRouterVisionRecognitionStrategy().recognize(
                 [], [str(self.image_path)]
             )
@@ -78,7 +79,11 @@ class OpenRouterRecognitionTests(unittest.TestCase):
         )
         self.assertEqual(
             kwargs["json"]["model"],
-            "nvidia/nemotron-3.5-super-vl:free",
+            "openrouter/free",
+        )
+        self.assertEqual(
+            kwargs["json"]["response_format"],
+            {"type": "json_object"},
         )
         image_content = kwargs["json"]["messages"][0]["content"][1]
         self.assertEqual(
@@ -211,6 +216,17 @@ class OpenRouterRecognitionTests(unittest.TestCase):
             OpenRouterVisionRecognitionStrategy().recognize(
                 [], [str(self.image_path)]
             )
+
+    def test_reports_routed_model_and_finish_reason_when_content_is_null(self):
+        response = self.make_response(None)
+        response.json.return_value["model"] = "provider/selected-model:free"
+        response.json.return_value["choices"][0]["finish_reason"] = "length"
+
+        with self.assertRaisesRegex(
+            RecognitionProviderError,
+            "routed model: provider/selected-model:free; finish reason: length",
+        ):
+            OpenRouterVisionRecognitionStrategy._extract_response_content(response)
 
     def test_does_not_call_catalog_for_author_only_result(self):
         response = self.make_response('{"title": "", "author": "A. Writer"}')

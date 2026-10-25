@@ -84,6 +84,26 @@ class BooksApiTests(unittest.TestCase):
         self.assertEqual(details_response.status_code, 200)
         self.assertEqual(details_response.get_json()["book"], created_book)
 
+    def test_create_book_without_author_uses_unknown(self):
+        for author in (None, "", "   "):
+            with self.subTest(author=author):
+                book = {"title": f"Book without author {author!r}"}
+                if author is not None:
+                    book["author"] = author
+
+                response = self.client.post(
+                    "/api/v1/books",
+                    data={
+                        "book": json.dumps(book),
+                        "images": (generate_test_jpeg(), "cover.jpg"),
+                    },
+                    content_type="multipart/form-data",
+                    headers=self.headers,
+                )
+
+                self.assertEqual(response.status_code, 201)
+                self.assertEqual(response.get_json()["book"]["author"], "Unknown")
+
     def test_create_duplicate_book_returns_conflict(self):
         data = {
             "book": json.dumps({"title": "Test Book", "author": "Test Author"}),

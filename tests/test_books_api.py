@@ -166,6 +166,54 @@ class BooksApiTests(unittest.TestCase):
         self.assertEqual(book1["id"], book2["id"])
         self.assertEqual(book1["title"], book2["title"])
 
+    def test_create_book_migrates_legacy_database_for_idempotency_key(self):
+        legacy_database_path = Path(self.temp_dir.name) / "legacy-books.db"
+        with closing(sqlite3.connect(legacy_database_path)) as connection:
+            with connection:
+                connection.executescript(
+                    """
+                    CREATE TABLE book (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        barcode TEXT,
+                        title TEXT,
+                        author TEXT,
+                        release_date TEXT,
+                        price REAL,
+                        publisher TEXT,
+                        description TEXT,
+                        thumbnail BLOB
+                    );
+                    CREATE TABLE book_images (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        book_id INTEGER,
+                        image_url TEXT,
+                        FOREIGN KEY (book_id) REFERENCES book(id)
+                    );
+                    """
+                )
+
+        legacy_app = create_app({
+            "TESTING": True,
+            "DATABASE": str(legacy_database_path),
+            "UPLOAD_FOLDER": str(Path(self.temp_dir.name) / "legacy-uploads"),
+        })
+        response = legacy_app.test_client().post(
+            "/api/v1/books",
+            data={
+                "book": json.dumps({
+                    "title": "Migrated Book",
+                    "author": "Migration Author",
+                    "idempotency_key": "legacy-database-key",
+                }),
+                "images": (generate_test_jpeg(), "cover.jpg"),
+            },
+            content_type="multipart/form-data",
+            headers=self.headers,
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.get_json()["book"]["title"], "Migrated Book")
+
 
 if __name__ == "__main__":
     unittest.main()

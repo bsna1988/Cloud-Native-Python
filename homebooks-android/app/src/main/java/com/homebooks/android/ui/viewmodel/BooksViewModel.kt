@@ -59,6 +59,9 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
     private val _recognitionState = MutableLiveData<UiState>()
     val recognitionState: LiveData<UiState> get() = _recognitionState
 
+    private val _bookshelfRecognitionState = MutableLiveData<UiState>()
+    val bookshelfRecognitionState: LiveData<UiState> get() = _bookshelfRecognitionState
+
     val pendingCount: LiveData<Int> = _repository.observePendingMutationsCount().asLiveData()
 
     private val _continuousScanResults = MutableLiveData<List<ScanResultItem>>(emptyList())
@@ -201,6 +204,17 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    suspend fun addBookSync(
+        title: String,
+        author: String,
+        barcode: String?,
+        releaseDate: String,
+        description: String,
+        imageFiles: List<File>
+    ): Result<Book> {
+        return _repository.addBook(title, author, barcode, releaseDate, description, imageFiles)
+    }
+
     fun recognizeImages(imageFiles: List<File>) {
         _recognitionState.value = UiState.Loading
         viewModelScope.launch {
@@ -213,12 +227,28 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun recognizeShelf(imageFiles: List<File>) {
+        _bookshelfRecognitionState.value = UiState.Loading
+        viewModelScope.launch {
+            val result = _repository.recognizeShelf(imageFiles)
+            result.onSuccess { books ->
+                _bookshelfRecognitionState.value = UiState.Success(books)
+            }.onFailure { exception ->
+                _bookshelfRecognitionState.value = UiState.Error(exception.message ?: "Bookshelf recognition failed")
+            }
+        }
+    }
+
     fun clearError() {
         _error.value = null
     }
 
     fun clearRecognitionState() {
         _recognitionState.value = UiState.Idle
+    }
+
+    fun clearBookshelfRecognitionState() {
+        _bookshelfRecognitionState.value = UiState.Idle
     }
 
     fun deleteBook(id: Int) {

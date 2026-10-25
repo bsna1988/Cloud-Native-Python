@@ -1,10 +1,14 @@
+import base64
+import json
 import os
+import mimetypes
 import tempfile
 from pathlib import Path
 
 from flask import current_app
 from PIL import Image, ImageOps
 
+from library_api.services.book_metadata import query_book_metadata
 from library_api.services.recognition_strategies import (
     BarcodeRecognitionStrategy,
     OpenRouterVisionRecognitionStrategy,
@@ -17,6 +21,8 @@ from library_api.services.recognition_strategies.base import (
 __all__ = [
     "RecognitionPipeline",
     "recognize_image",
+    "recognize_shelf_image",
+    "OpenRouterShelfRecognitionStrategy",
 ]
 
 
@@ -127,6 +133,164 @@ def recognize_image(uploaded_files):
 
         pipeline = RecognitionPipeline()
         return pipeline.recognize(uploaded_files, temp_paths)
+
+    finally:
+        for temp_path in temp_paths:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
+
+class OpenRouterShelfRecognitionStrategy:
+    name = "openrouter_shelf"
+
+    def recognize(self, uploaded_files, temp_paths):
+        api_key = current_app.config["OPENROUTER_API_KEY"]
+        if not api_key:
+            raise RecognitionProviderError(
+                "Image recognition is unavailable: OPENROUTER_API_KEY is not configured."
+            )
+
+        model = current_app.config["OPENROUTER_MODEL"]
+        if not isinstance(model, str) or not model:
+            raise RecognitionProviderError(
+                "Image recognition is unavailable: OPENROUTER_MODEL is not configured."
+            )
+        if not model.endswith(":free"):
+            raise RecognitionProviderError(
+                "Image recognition requires an OpenRouter model ID ending in ':free'."
+            )
+
+        content = [
+            {
+                "type": "text",
+                "text": (
+                    "Read the bookshelf image. Detect multiple books visible on the shelf "
+                    "and return a JSON list (array) of objects, each with 'title' and 'author' "
+                    "string fields. Use empty strings for unreadable fields; do not guess or invent books."
+                ),
+            }
+        ]
+        for temp_path in temp_paths:
+            mime_type = mimetypes.guess_type(temp_path)[0] or "image/jpeg"
+            encoded_image = base64.b64encode(
+                Path(temp_path).read_bytes()
+            ).decode("ascii")
+            content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{mime_type};base64,{encoded_image}",
+                },
+            })
+
+        response = OpenRouterVisionRecognitionStrategy._request(api_key, model, content)
+        response_content = OpenRouterVisionRecognitionStrategy._extract_response_content(response)
+        candidates = self._parse_shelf_data(response_content)
+
+        enriched_books = []
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                continue
+            title = candidate.get("title", "")
+            author = candidate.get("author", "")
+            if not isinstance(title, str) or not isinstance(author, str):
+                continue
+            title = title.strip()
+            author = author.strip()
+            if not title:
+                continue
+            if len(title) > 300:
+                title = title[:300]
+            if len(author) > 300:
+                author = author[:300]
+
+            book_entry = {
+                "title": title,
+                "author": author,
+                "barcode": "",
+                "release_date": "",
+                "description": "",
+                "publisher": "",
+            }
+
+            try:
+                metadata_list = query_book_metadata(title=title, author=author if author else None)
+                if metadata_list:
+                    best_meta = metadata_list[0]
+                    book_entry["title"] = best_meta.get("title") or title
+                    book_entry["author"] = best_meta.get("author") or author
+                    book_entry["barcode"] = best_meta.get("barcode", "")
+                    book_entry["release_date"] = best_meta.get("release_date", "")
+                    book_entry["description"] = best_meta.get("description", "")
+                    book_entry["publisher"] = best_meta.get("publisher", "")
+            except Exception:
+                current_app.logger.exception(
+                    "Metadata lookup for bookshelf candidate failed"
+                )
+
+            enriched_books.append(book_entry)
+
+        return enriched_books
+
+    @staticmethod
+    def _parse_shelf_data(response_content):
+        try:
+            data = json.loads(response_content)
+        except json.JSONDecodeError as error:
+            raise RecognitionProviderError(
+                "OpenRouter returned malformed bookshelf metadata JSON."
+            ) from error
+
+        if isinstance(data, list):
+            candidates = data
+        elif isinstance(data, dict):
+            candidates = data.get("books") or data.get("candidates") or data.get("items") or []
+            if not isinstance(candidates, list):
+                raise RecognitionProviderError(
+                    "OpenRouter bookshelf metadata must contain a JSON list."
+                )
+        else:
+            raise RecognitionProviderError(
+                "OpenRouter bookshelf metadata must be a JSON list or object."
+            )
+
+        if len(candidates) > 50:
+            candidates = candidates[:50]
+
+        return candidates
+
+
+def recognize_shelf_image(uploaded_files):
+    """Return multiple book metadata candidates recognized from uploaded bookshelf images."""
+    if not isinstance(uploaded_files, (list, tuple)):
+        uploaded_files = [uploaded_files]
+    if not uploaded_files:
+        raise ValueError("Upload at least one image")
+
+    upload_folder = current_app.config["UPLOAD_FOLDER"]
+    temp_paths = []
+
+    try:
+        for uploaded_file in uploaded_files:
+            suffix = Path(uploaded_file.filename or "").suffix or ".jpg"
+            with tempfile.NamedTemporaryFile(
+                dir=upload_folder,
+                suffix=suffix,
+                delete=False,
+            ) as temp_file:
+                temp_path = temp_file.name
+                temp_paths.append(temp_path)
+                uploaded_file.save(temp_file)
+
+            try:
+                with Image.open(temp_path) as img:
+                    transposed = ImageOps.exif_transpose(img)
+                    if transposed:
+                        transposed.save(temp_path)
+            except Exception:
+                pass
+
+        strategy = OpenRouterShelfRecognitionStrategy()
+        return strategy.recognize(uploaded_files, temp_paths)
 
     finally:
         for temp_path in temp_paths:

@@ -13,7 +13,7 @@ HomeBooks follows a clean monorepo architecture consisting of three primary tier
 2. **Server Tier (Backend):**
    - **Flask REST API (`/backend`):** Modular blueprint-based Python application (`/api/v1/books`).
    - **Strategy Pattern for Recognition:** Pluggable recognition pipeline supporting barcode and cover OCR strategies.
-   - **Metadata Providers:** Extensible search providers starting with **Google Books API** (primary) and falling back to **OpenLibrary**.
+   - **Metadata Providers:** Google Books API with OpenLibrary fallback, backed by a size-limited in-memory cache (24-hour positive and 15-minute no-result entries), a bounded in-process FIFO request queue paced at up to three provider calls per second, `limits` per-thread quotas, and Tenacity retries.
 3. **Data Tier:**
    - **SQLite (`books.db`):** Local relational database managing books and multi-image associations.
 
@@ -62,6 +62,16 @@ The Android app features a dedicated continuous scanning mode for fast, uninterr
 - **Session Suppression & Duplicate Checks:** Suppresses repeat frame detections during the session and checks local Room storage to skip books already present.
 - **Automatic Metadata & Offline Queuing:** Automatically looks up book metadata via the backend barcode endpoint and queues successful lookups for offline-first synchronization.
 - **Live Status Feedback:** Displays real-time scan status overlay ("Added", "Already exists", "Not found") while keeping the camera active for continuous scanning.
+
+---
+
+## 📚 Add Books from Bookshelf Photos (ADR 0005)
+
+The Android app supports capturing or uploading a bookshelf photograph to add multiple books in batch:
+- **Multi-Book Vision Recognition:** Uses OpenRouter vision models on the backend to detect multiple book spines and extract titles and authors from a single photo.
+- **Candidate Enrichment:** Automatically enriches recognized candidates using Google Books and OpenLibrary metadata lookup providers.
+- **Review & Edit UI:** Displays a dedicated review screen where users can inspect recognized books, edit titles/authors, deselect items, and see automatic local library duplicate warnings.
+- **Batch Import:** Confirms selected books and adds them efficiently via the offline-first repository.
 
 ---
 
@@ -206,4 +216,62 @@ sudo journalctl -u homebooks-backend -f
 To view the last 100 log lines:
 ```bash
 sudo journalctl -u homebooks-backend -n 100 --no-pager
+```
+
+### Serve the Raspberry Pi backend through a Cloudflare Tunnel
+
+The HomeBooks service is available at `https://homebooks.us.ci` through the
+`homebooks` Cloudflare Tunnel. The `cloudflared` service runs on the Raspberry
+Pi and connects out to Cloudflare; the tunnel forwards requests to the local
+Gunicorn service on port `5005`. This does not require opening or forwarding
+port `5005` on the router.
+
+#### Configure the tunnel route
+
+The Raspberry Pi must already be running the backend and the Cloudflare Tunnel
+must be installed and connected to your Cloudflare account. In the Cloudflare
+dashboard:
+
+1. Open **Zero Trust → Networks → Tunnels** and select the `homebooks` tunnel.
+2. Add or edit a **Published application route**.
+3. Set the public hostname to `homebooks.us.ci` (leave the subdomain blank for
+   the root domain).
+4. Set the service type to **HTTP** and the service URL to
+   `http://localhost:5005`. Because `cloudflared` and Gunicorn run on the same
+   Pi, `localhost` points to the backend.
+5. Save the route. Cloudflare should create or associate the DNS Tunnel record
+   for `homebooks.us.ci`; confirm it is proxied in the domain's DNS records.
+
+If the domain is managed at a separate registrar, its DNS/nameserver setup must
+also direct the domain to Cloudflare. Do not point a public DNS record at the
+Pi's private LAN address.
+
+#### Verify connectivity
+
+On the Pi, confirm the backend responds locally and the tunnel service is
+running:
+
+```bash
+curl -I http://127.0.0.1:5005/
+sudo systemctl status cloudflared --no-pager
+```
+
+Then test the public hostname from a device outside the Pi:
+
+```bash
+curl -I https://homebooks.us.ci/
+```
+
+The public URL uses HTTPS at Cloudflare; the tunnel can connect to the local
+backend over HTTP. Cloudflare Tunnel does not add application-level
+authentication by itself. Keep the app's API authentication enabled, and use
+Cloudflare Access as an additional layer if the site should only be available
+to authenticated visitors.
+
+If the public request fails, first check the local backend, then the tunnel's
+health and route in the Cloudflare dashboard. Tunnel service logs are available
+with:
+
+```bash
+sudo journalctl -u cloudflared -n 100 --no-pager
 ```

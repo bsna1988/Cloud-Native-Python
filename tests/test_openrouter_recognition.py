@@ -243,6 +243,37 @@ class OpenRouterRecognitionTests(unittest.TestCase):
         self.assertEqual(app.config["OPENROUTER_API_KEY"], "environment-key")
         self.assertEqual(app.config["OPENROUTER_MODEL"], "test/model:free")
 
+    def test_recognize_shelf_endpoint_returns_multiple_candidates(self):
+        response = self.make_response(
+            '[{"title": "Book One", "author": "Author One"}, {"title": "Book Two", "author": "Author Two"}]'
+        )
+
+        with (
+            self.app.app_context(),
+            patch(
+                "library_api.services.recognition_strategies.openrouter.requests.post",
+                return_value=response,
+            ),
+            patch(
+                "library_api.services.recognition.query_book_metadata",
+                return_value=[],
+            ),
+        ):
+            client = self.app.test_client()
+            res = client.post(
+                "/api/v1/books/recognize-shelf",
+                headers={"X-API-Key": "test-app-key"},
+                data={"images": (BytesIO(b"shelf image"), "shelf.jpg")},
+                content_type="multipart/form-data",
+            )
+
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertEqual(data["status"], "recognized")
+        self.assertEqual(len(data["books"]), 2)
+        self.assertEqual(data["books"][0]["title"], "Book One")
+        self.assertEqual(data["books"][1]["title"], "Book Two")
+
 
 if __name__ == "__main__":
     unittest.main()

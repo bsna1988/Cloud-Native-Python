@@ -28,6 +28,12 @@ interface BooksApiService {
         @Part images: List<MultipartBody.Part>
     ): Response<RecognitionResponse>
 
+    @Multipart
+    @POST("api/v1/books/recognize-shelf")
+    suspend fun recognizeShelf(
+        @Part images: List<MultipartBody.Part>
+    ): Response<RecognitionResponse>
+
     @GET("uploads/{filename}")
     suspend fun getUploadedImage(@Path("filename") filename: String): Response<ByteArray>
 

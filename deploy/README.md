@@ -66,6 +66,26 @@ configured OpenRouter model is currently free and supports image input before
 changing `OPENROUTER_MODEL`. Recognition sends uploaded book-cover images to
 OpenRouter for processing.
 
+The provided Gunicorn service runs one worker with three threads
+(`--workers 1 --worker-class gthread --threads 3`). A worker is a separate
+operating system process; its threads handle requests concurrently within it.
+Metadata requests from those threads enter a bounded in-process FIFO queue and
+a single dispatcher sends them at most three times per second, evenly spaced.
+The `limits` quota additionally allows each originating thread at most one
+provider call per second. These limits apply to outbound calls to Google Books
+and OpenLibrary, not to incoming requests to the HomeBooks API. Increasing the
+worker count creates another independent queue and dispatcher, so it can
+increase the aggregate provider request rate.
+
+The queue has a fixed maximum size; if it is full, lookups fail rather than
+accumulating unbounded work. Requests wait synchronously for their lookup
+result, and pending queued requests are not durable across a backend restart.
+
+The worker and thread counts are configured in
+`deploy/homebooks-backend.service`, in Gunicorn's `ExecStart` arguments. The
+rate limit and retry policy are configured in
+`backend/library_api/services/book_metadata.py`.
+
 Verify service status:
 ```bash
 sudo systemctl status homebooks-backend

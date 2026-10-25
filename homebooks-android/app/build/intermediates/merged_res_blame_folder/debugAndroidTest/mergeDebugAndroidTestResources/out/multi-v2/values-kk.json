@@ -4,24 +4,7 @@
             "outputFile": "com.homebooks.android.test.app-mergeDebugAndroidTestResources-32:/values-kk/values-kk.xml",
             "map": [
                 {
-                    "source": "/Users/sasha/.gradle/caches/9.6.0/transforms/4085c7d37aec5c5a5db70cef0287f474/transformed/core-1.12.0/res/values-kk/values-kk.xml",
-                    "from": {
-                        "startLines": "2,3,4,5,6,7,8,9",
-                        "startColumns": "4,4,4,4,4,4,4,4",
-                        "startOffsets": "55,150,252,354,457,561,658,769",
-                        "endColumns": "94,101,101,102,103,96,110,100",
-                        "endOffsets": "145,247,349,452,556,653,764,865"
-                    },
-                    "to": {
-                        "startLines": "2,3,4,5,6,7,8,23",
-                        "startColumns": "4,4,4,4,4,4,4,4",
-                        "startOffsets": "105,200,302,404,507,611,708,2013",
-                        "endColumns": "94,101,101,102,103,96,110,100",
-                        "endOffsets": "195,297,399,502,606,703,814,2109"
-                    }
-                },
-                {
-                    "source": "/Users/sasha/.gradle/caches/9.6.0/transforms/996e7bc80a254a7bdac9ad7d6afb6070/transformed/ui-release/res/values-kk/values-kk.xml",
+                    "source": "/Users/sasha/.gradle/caches/9.6.0/transforms/c10a7bc3ad3861c9503008ae8b2f14a5/transformed/ui-release/res/values-kk/values-kk.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
@@ -35,6 +18,23 @@
                         "startOffsets": "819,912,995,1100,1202,1289,1370,1463,1553,1635,1704,1772,1855,1940,2114,2190,2260",
                         "endColumns": "92,82,104,101,86,80,92,89,81,68,67,82,84,72,75,69,117",
                         "endOffsets": "907,990,1095,1197,1284,1365,1458,1548,1630,1699,1767,1850,1935,2008,2185,2255,2373"
+                    }
+                },
+                {
+                    "source": "/Users/sasha/.gradle/caches/9.6.0/transforms/7955a12bd5ca92fcebd324985427840f/transformed/core-1.12.0/res/values-kk/values-kk.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8,9",
+                        "startColumns": "4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,150,252,354,457,561,658,769",
+                        "endColumns": "94,101,101,102,103,96,110,100",
+                        "endOffsets": "145,247,349,452,556,653,764,865"
+                    },
+                    "to": {
+                        "startLines": "2,3,4,5,6,7,8,23",
+                        "startColumns": "4,4,4,4,4,4,4,4",
+                        "startOffsets": "105,200,302,404,507,611,708,2013",
+                        "endColumns": "94,101,101,102,103,96,110,100",
+                        "endOffsets": "195,297,399,502,606,703,814,2109"
                     }
                 }
             ]

@@ -16,6 +16,7 @@ import androidx.navigation.navArgument
 import com.homebooks.android.ui.screens.AddBookScreen
 import com.homebooks.android.ui.screens.BookDetailScreen
 import com.homebooks.android.ui.screens.BookListScreen
+import com.homebooks.android.ui.screens.BookshelfReviewScreen
 import com.homebooks.android.ui.screens.ContinuousScanScreen
 import com.homebooks.android.ui.screens.EditBookScreen
 import com.homebooks.android.ui.screens.SplashScreen
@@ -57,6 +58,22 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onBulkScanClick = {
                                     navController.navigate("continuous_scan")
+                                },
+                                onScanShelfComplete = {
+                                    navController.navigate("bookshelf_review")
+                                }
+                            )
+                        }
+                        composable("bookshelf_review") {
+                            BookshelfReviewScreen(
+                                viewModel = viewModel,
+                                onImportComplete = {
+                                    viewModel.clearBookshelfRecognitionState()
+                                    navController.popBackStack()
+                                },
+                                onBackClick = {
+                                    viewModel.clearBookshelfRecognitionState()
+                                    navController.popBackStack()
                                 }
                             )
                         }

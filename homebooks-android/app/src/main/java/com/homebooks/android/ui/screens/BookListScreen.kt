@@ -21,6 +21,11 @@ import com.homebooks.android.R
 import com.homebooks.android.data.model.Book
 import com.homebooks.android.ui.viewmodel.BooksViewModel
 import com.homebooks.android.ui.viewmodel.UiState
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,12 +33,71 @@ fun BookListScreen(
     viewModel: BooksViewModel,
     onBookClick: (Int) -> Unit,
     onAddClick: () -> Unit,
-    onBulkScanClick: () -> Unit
+    onBulkScanClick: () -> Unit,
+    onScanShelfComplete: () -> Unit
 ) {
+    val context = LocalContext.current
     val booksState by viewModel.booksState.observeAsState(UiState.Loading)
     val errorMessage by viewModel.error.observeAsState(null)
     val pendingCount by viewModel.pendingCount.observeAsState(0)
     var searchQuery by remember { mutableStateOf("") }
+    var showScanShelfDialog by remember { mutableStateOf(false) }
+    var cameraFile by remember { mutableStateOf<File?>(null) }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && cameraFile != null) {
+            val file = cameraFile!!
+            viewModel.recognizeShelf(listOf(file))
+            onScanShelfComplete()
+        }
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val file = File(context.cacheDir, "shelf_${System.currentTimeMillis()}.jpg")
+                inputStream?.use { input ->
+                    file.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                viewModel.recognizeShelf(listOf(file))
+                onScanShelfComplete()
+            } catch (_: Exception) {}
+        }
+    }
+
+    if (showScanShelfDialog) {
+        AlertDialog(
+            onDismissRequest = { showScanShelfDialog = false },
+            title = { Text("Scan Bookshelf") },
+            text = { Text("Choose how to provide the bookshelf image for recognition.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showScanShelfDialog = false
+                    val file = File(context.cacheDir, "shelf_cam_${System.currentTimeMillis()}.jpg")
+                    cameraFile = file
+                    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                    cameraLauncher.launch(uri)
+                }) {
+                    Text("Take Photo")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showScanShelfDialog = false
+                    galleryLauncher.launch("image/*")
+                }) {
+                    Text("Choose from Gallery")
+                }
+            }
+        )
+    }
 
     LaunchedEffect(Unit) {
         viewModel.loadBooks()
@@ -44,6 +108,9 @@ fun BookListScreen(
             TopAppBar(
                 title = { Text(text = "HomeBooks") },
                 actions = {
+                    TextButton(onClick = { showScanShelfDialog = true }) {
+                        Text("Scan Bookshelf", color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
                     TextButton(onClick = onBulkScanClick) {
                         Text("Bulk Scan", color = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
@@ -83,14 +150,23 @@ fun BookListScreen(
                         .padding(horizontal = 16.dp, vertical = 4.dp)
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier
+                            .padding(12.dp)
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Pending offline changes ($pendingCount). Syncing...",
+                            text = "Pending offline changes ($pendingCount)",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.weight(1f)
                         )
+                        TextButton(onClick = {
+                            viewModel.loadBooks()
+                        }) {
+                            Text("Sync Now")
+                        }
                     }
                 }
             }

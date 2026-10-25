@@ -4,7 +4,7 @@
             "outputFile": "com.homebooks.android.test.app-mergeDebugAndroidTestResources-32:/values-ro/values-ro.xml",
             "map": [
                 {
-                    "source": "/Users/sasha/.gradle/caches/9.6.0/transforms/4085c7d37aec5c5a5db70cef0287f474/transformed/core-1.12.0/res/values-ro/values-ro.xml",
+                    "source": "/Users/sasha/.gradle/caches/9.6.0/transforms/7955a12bd5ca92fcebd324985427840f/transformed/core-1.12.0/res/values-ro/values-ro.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9",
                         "startColumns": "4,4,4,4,4,4,4,4",
@@ -21,7 +21,7 @@
                     }
                 },
                 {
-                    "source": "/Users/sasha/.gradle/caches/9.6.0/transforms/996e7bc80a254a7bdac9ad7d6afb6070/transformed/ui-release/res/values-ro/values-ro.xml",
+                    "source": "/Users/sasha/.gradle/caches/9.6.0/transforms/c10a7bc3ad3861c9503008ae8b2f14a5/transformed/ui-release/res/values-ro/values-ro.xml",
                     "from": {
                         "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18",
                         "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",

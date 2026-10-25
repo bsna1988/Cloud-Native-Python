@@ -5,7 +5,7 @@ from flask import Blueprint, jsonify, request, current_app
 
 from library_api.repositories.books import DuplicateBookError
 from library_api.services.books import create_book
-from library_api.services.recognition import recognize_image
+from library_api.services.recognition import recognize_image, recognize_shelf_image
 from library_api.services.recognition_strategies.base import (
     RecognitionProviderError,
 )
@@ -93,6 +93,31 @@ def recognize_book():
 
     try:
         books = recognize_image(images)
+    except RecognitionProviderError as error:
+        return jsonify({"error": str(error)}), 503
+    except ValueError as error:
+        return jsonify({"error": str(error)}), 422
+
+    return jsonify({"status": "recognized", "books": books}), 200
+
+
+@books_bp.post("/recognize-shelf")
+@require_api_key
+def recognize_shelf():
+    images = [
+        image for image in request.files.getlist("images")
+        if image.filename
+    ]
+    if not images:
+        image = request.files.get("image")
+        if image and image.filename:
+            images = [image]
+
+    if not images:
+        return jsonify({"error": "Upload an image in the 'image' field"}), 400
+
+    try:
+        books = recognize_shelf_image(images)
     except RecognitionProviderError as error:
         return jsonify({"error": str(error)}), 503
     except ValueError as error:

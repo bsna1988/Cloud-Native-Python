@@ -260,16 +260,38 @@ class BooksRepository(
         }
     }
 
+    suspend fun recognizeShelf(imageFiles: List<File>): Result<List<RecognizedBook>> {
+        return try {
+            val imageParts = imageFiles.map { file ->
+                val requestBody = file.asRequestBody("image/*".toMediaType())
+                MultipartBody.Part.createFormData("images", file.name, requestBody)
+            }
+            val response = apiService.recognizeShelf(imageParts)
+            if (response.isSuccessful) {
+                Result.success(response.body()?.books ?: emptyList())
+            } else {
+                Result.failure(Exception(response.errorBody()?.string() ?: "Bookshelf recognition failed"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun searchByBarcode(isbn: String): Result<List<RecognizedBook>> {
         return try {
             val response = apiService.searchByBarcode(isbn)
             if (response.isSuccessful) {
-                Result.success(response.body()?.books ?: emptyList())
+                val books = response.body()?.books ?: emptyList()
+                if (books.isEmpty()) {
+                    Result.failure(Exception("Book not recognized"))
+                } else {
+                    Result.success(books)
+                }
             } else {
-                Result.failure(Exception(response.errorBody()?.string() ?: "Barcode search failed"))
+                Result.failure(Exception("Book not recognized"))
             }
-        } catch (e: Exception) {
-            Result.failure(e)
+        } catch (_: Exception) {
+            Result.failure(Exception("Book not recognized"))
         }
     }
 

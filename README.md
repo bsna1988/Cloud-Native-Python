@@ -65,13 +65,16 @@ The Android app features a dedicated continuous scanning mode for fast, uninterr
 
 ---
 
-## 📚 Add Books from Bookshelf Photos (ADR 0005)
+## 📚 Add Books from Bookshelf Photos (ADR 0005 and ADR 0006)
 
 The Android app supports capturing or uploading a bookshelf photograph to add multiple books in batch:
-- **Multi-Book Vision Recognition:** Uses OpenRouter vision models on the backend to detect multiple book spines and extract titles and authors from a single photo.
-- **Candidate Enrichment:** Automatically enriches recognized candidates using Google Books and OpenLibrary metadata lookup providers.
+- **On-Device Text Recognition:** Uses bundled Google ML Kit Text Recognition to extract text blocks locally from the selected shelf image. Source images are not sent to OpenRouter by this Android flow.
+- **Reviewable OCR Candidates:** OCR blocks are provisional title candidates; authors are left blank rather than guessed. OCR does not yet include a dedicated spine detector or VLM, so users should verify and edit results.
 - **Review & Edit UI:** Displays a dedicated review screen where users can inspect recognized books, edit titles/authors, deselect items, and see automatic local library duplicate warnings.
 - **Batch Import:** Confirms selected books and adds them efficiently via the offline-first repository.
+
+The backend OpenRouter recognition endpoints remain available to other clients;
+the Android bookshelf flow performs image text recognition on-device.
 
 ---
 

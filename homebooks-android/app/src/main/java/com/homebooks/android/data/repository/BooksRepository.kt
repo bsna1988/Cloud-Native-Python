@@ -14,6 +14,8 @@ import com.homebooks.android.data.model.RecognizedBook
 import com.homebooks.android.data.worker.SyncWorker
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -31,6 +33,10 @@ class BooksRepository(
     private val bookDao = db.bookDao()
     private val pendingMutationDao = db.pendingMutationDao()
     private val gson = Gson()
+
+    init {
+        scheduleSync()
+    }
 
     private val baseUrl: String = run {
         val prefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
@@ -243,36 +249,14 @@ class BooksRepository(
     }
 
     suspend fun recognizeImages(imageFiles: List<File>): Result<List<RecognizedBook>> {
-        return try {
-            val imageParts = imageFiles.map { file ->
-                val requestBody = file.asRequestBody("image/*".toMediaType())
-                MultipartBody.Part.createFormData("images", file.name, requestBody)
-            }
-            val response = apiService.recognizeImage(imageParts)
-            if (response.isSuccessful) {
-                Result.success(response.body()?.books ?: emptyList())
-            } else {
-                Result.failure(Exception(response.errorBody()?.string() ?: "Recognition failed"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
+        return withContext(Dispatchers.IO) {
+            com.homebooks.android.util.OnDeviceRecognitionEngine.recognizeImagesLocally(context, imageFiles)
         }
     }
 
     suspend fun recognizeShelf(imageFiles: List<File>): Result<List<RecognizedBook>> {
-        return try {
-            val imageParts = imageFiles.map { file ->
-                val requestBody = file.asRequestBody("image/*".toMediaType())
-                MultipartBody.Part.createFormData("images", file.name, requestBody)
-            }
-            val response = apiService.recognizeShelf(imageParts)
-            if (response.isSuccessful) {
-                Result.success(response.body()?.books ?: emptyList())
-            } else {
-                Result.failure(Exception(response.errorBody()?.string() ?: "Bookshelf recognition failed"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
+        return withContext(Dispatchers.IO) {
+            com.homebooks.android.util.OnDeviceRecognitionEngine.recognizeShelfLocally(context, imageFiles)
         }
     }
 

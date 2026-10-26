@@ -171,6 +171,7 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
     fun loadBooks() {
         viewModelScope.launch {
             _repository.getBooks()
+            _repository.triggerImmediateSync()
         }
     }
 

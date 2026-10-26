@@ -42,6 +42,7 @@ fun BookListScreen(
     val pendingCount by viewModel.pendingCount.observeAsState(0)
     var searchQuery by remember { mutableStateOf("") }
     var showScanShelfDialog by remember { mutableStateOf(false) }
+    var bookToDelete by remember { mutableStateOf<Book?>(null) }
     var cameraFile by remember { mutableStateOf<File?>(null) }
 
     val cameraLauncher = rememberLauncherForActivityResult(
@@ -70,6 +71,31 @@ fun BookListScreen(
                 onScanShelfComplete()
             } catch (_: Exception) {}
         }
+    }
+
+    if (bookToDelete != null) {
+        val book = bookToDelete!!
+        AlertDialog(
+            onDismissRequest = { bookToDelete = null },
+            title = { Text("Delete Book") },
+            text = { Text("Are you sure you want to delete \"${book.title}\"? This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        book.id?.let { viewModel.deleteBook(it) }
+                        bookToDelete = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { bookToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     if (showScanShelfDialog) {
@@ -202,16 +228,15 @@ fun BookListScreen(
                                 items(filteredBooks, key = { it.id ?: it.hashCode() }) { book ->
                                     val dismissState = rememberDismissState(
                                         confirmValueChange = { dismissValue ->
-                                            if (dismissValue == DismissValue.DismissedToStart || dismissValue == DismissValue.DismissedToEnd) {
-                                                book.id?.let { viewModel.deleteBook(it) }
-                                                true
-                                            } else {
-                                                false
+                                            if (dismissValue == DismissValue.DismissedToStart) {
+                                                bookToDelete = book
                                             }
+                                            false
                                         }
                                     )
                                     SwipeToDismiss(
                                         state = dismissState,
+                                        directions = setOf(DismissDirection.EndToStart),
                                         background = {
                                             Box(
                                                 modifier = Modifier

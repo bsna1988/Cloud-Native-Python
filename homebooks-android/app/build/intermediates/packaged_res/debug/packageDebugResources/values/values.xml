@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">HomeBooks</string>
-    <style name="Theme.HomeBooks" parent="Theme.Material3.DayNight.NoActionBar">
-        
-    </style>
-</resources>

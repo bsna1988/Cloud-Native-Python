@@ -1,6 +1,10 @@
 package com.homebooks.android.ui.screens
 
 import android.app.Activity
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.content.pm.ActivityInfo
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -50,7 +54,7 @@ fun AddBookScreen(
     var selectedFiles by remember { mutableStateOf<List<File>>(emptyList()) }
     var selectedModels by remember { mutableStateOf<List<Any>>(emptyList()) }
 
-    var cameraFile by remember { mutableStateOf<File?>(null) }
+    var cameraFilePath by rememberSaveable { mutableStateOf<String?>(null) }
 
     val recognitionState by viewModel.recognitionState.observeAsState(UiState.Idle)
     val errorMessage by viewModel.error.observeAsState(null)
@@ -84,10 +88,50 @@ fun AddBookScreen(
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
-        if (success && cameraFile != null) {
-            val file = cameraFile!!
-            selectedFiles = selectedFiles + file
-            selectedModels = selectedModels + file
+        val path = cameraFilePath
+        if (success && path != null) {
+            val file = File(path)
+            if (file.exists()) {
+                selectedFiles = selectedFiles + file
+                selectedModels = selectedModels + file
+            }
+        }
+    }
+
+    fun launchCameraInternal() {
+        try {
+            val file = File(context.cacheDir, "book_cam_${System.currentTimeMillis()}.jpg")
+            file.createNewFile()
+            cameraFilePath = file.absolutePath
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+            cameraLauncher.launch(uri)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            launchCameraInternal()
+        }
+    }
+
+    fun startCameraCapture() {
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasPermission) {
+            launchCameraInternal()
+        } else {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
@@ -175,16 +219,7 @@ fun AddBookScreen(
                 }
 
                 OutlinedButton(
-                    onClick = {
-                        val file = File(context.cacheDir, "book_cam_${System.currentTimeMillis()}.jpg")
-                        cameraFile = file
-                        val uri = FileProvider.getUriForFile(
-                            context,
-                            "${context.packageName}.fileprovider",
-                            file
-                        )
-                        cameraLauncher.launch(uri)
-                    },
+                    onClick = { startCameraCapture() },
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)

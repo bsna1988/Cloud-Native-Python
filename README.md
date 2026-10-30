@@ -69,12 +69,17 @@ The Android app features a dedicated continuous scanning mode for fast, uninterr
 
 The Android app supports capturing or uploading a bookshelf photograph to add multiple books in batch:
 - **On-Device Text Recognition:** Uses bundled Google ML Kit Text Recognition to extract text blocks locally from the selected shelf image. Source images are not sent to OpenRouter by this Android flow.
-- **Reviewable OCR Candidates:** OCR blocks are provisional title candidates; authors are left blank rather than guessed. OCR does not yet include a dedicated spine detector or VLM, so users should verify and edit results.
+- **Local OCR Word Correction (ADR 0007):** Uses the MIT-licensed JSymSpell library with a small first-party French/English/Ukrainian word list. Only a unique one-edit match is applied; the original OCR text remains visible during review. Unknown or ambiguous words are left untouched. The JSymSpell license is included in `app/src/main/assets/third_party_licenses/`.
+- **Reviewable OCR Candidates:** OCR blocks are provisional title candidates; users should verify and edit results. OCR does not yet include a dedicated spine detector or VLM.
 - **Review & Edit UI:** Displays a dedicated review screen where users can inspect recognized books, edit titles/authors, deselect items, and see automatic local library duplicate warnings.
 - **Batch Import:** Confirms selected books and adds them efficiently via the offline-first repository.
 
 The backend OpenRouter recognition endpoints remain available to other clients;
 the Android bookshelf flow performs image text recognition on-device.
+
+## 📖 Catalog Metadata Candidates (ADR 0008)
+
+The Android book detail page looks up incomplete records directly with Google Books and Open Library. Matches are shown with their source and can be accepted explicitly; acceptance updates the local record through the normal offline-first repository and sync path. Complete records are not searched. Lookup errors do not block viewing or manual editing.
 
 ---
 

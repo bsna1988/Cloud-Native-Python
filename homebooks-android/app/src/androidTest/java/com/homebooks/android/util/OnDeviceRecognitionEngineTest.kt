@@ -23,22 +23,66 @@ class OnDeviceRecognitionEngineTest {
                 context,
                 listOf(imageFile)
             )
-
             assertTrue(
                 "Shelf OCR failed: ${result.exceptionOrNull()?.message}",
                 result.isSuccess
             )
             val books = result.getOrThrow()
             val recognizedText = books.mapNotNull(RecognizedBook::title)
+            val rawRecognizedText = books.map { it.raw_title ?: it.title.orEmpty() }
             val matchedTitles = expectedTitles.filter { expected ->
                 recognizedText.any { candidate -> titleMatches(expected, candidate) }
             }
+            val rawMatchedTitles = expectedTitles.filter { expected ->
+                rawRecognizedText.any { candidate -> titleMatches(expected, candidate) }
+            }
+            val exactMatchedTitles = expectedTitles.filter { expected ->
+                recognizedText.any { candidate -> normalize(expected) == normalize(candidate) }
+            }
+            val rawExactMatchedTitles = expectedTitles.filter { expected ->
+                rawRecognizedText.any { candidate -> normalize(expected) == normalize(candidate) }
+            }
+            val changedTitles = books.filter { !it.raw_title.isNullOrBlank() }
+            val fixedTitleTokens = changedTitles.sumOf { book ->
+                val rawTokens = normalize(book.raw_title.orEmpty()).split(" ").toSet()
+                val correctedTokens = normalize(book.title.orEmpty()).split(" ").toSet()
+                (correctedTokens - rawTokens).count { correctedToken ->
+                    expectedTitles.any { expected ->
+                        correctedToken in normalize(expected).split(" ")
+                    }
+                }
+            }
+            val changedToNonReferenceTokens = changedTitles.sumOf { book ->
+                val rawTokens = normalize(book.raw_title.orEmpty()).split(" ").toSet()
+                val correctedTokens = normalize(book.title.orEmpty()).split(" ").toSet()
+                (correctedTokens - rawTokens).count { correctedToken ->
+                    expectedTitles.none { expected ->
+                        correctedToken in normalize(expected).split(" ")
+                    }
+                }
+            }
             android.util.Log.i(
                 "ShelfOcrBenchmark",
-                "Matched ${matchedTitles.size}/${expectedTitles.size} titles. " +
-                    "Matched: $matchedTitles. OCR candidates: $recognizedText"
+                "Approximate titles: raw ${rawMatchedTitles.size}/${expectedTitles.size}, " +
+                    "corrected ${matchedTitles.size}/${expectedTitles.size}; " +
+                    "exact titles: raw ${rawExactMatchedTitles.size}/${expectedTitles.size}, " +
+                    "corrected ${exactMatchedTitles.size}/${expectedTitles.size}; " +
+                    "changed title candidates: ${changedTitles.size}; " +
+                    "changed tokens matching reference: $fixedTitleTokens; " +
+                    "changed tokens absent from reference: $changedToNonReferenceTokens. " +
+                    "Raw candidates: $rawRecognizedText. Corrected candidates: $recognizedText"
             )
 
+            assertTrue(
+                "Correction must not reduce fixture title matches: raw " +
+                    "${rawMatchedTitles.size}, corrected ${matchedTitles.size}.",
+                matchedTitles.size >= rawMatchedTitles.size
+            )
+            assertTrue(
+                "Correction must not reduce exact fixture title matches: raw " +
+                    "${rawExactMatchedTitles.size}, corrected ${exactMatchedTitles.size}.",
+                exactMatchedTitles.size >= rawExactMatchedTitles.size
+            )
             assertTrue(
                 "Matched ${matchedTitles.size}/${expectedTitles.size} reference titles " +
                     "(${matchedTitles.size * 100 / expectedTitles.size}%). " +
@@ -48,6 +92,10 @@ class OnDeviceRecognitionEngineTest {
             assertTrue(
                 "OCR must not guess authors",
                 books.all { it.author.isNullOrBlank() }
+            )
+            assertTrue(
+                "Corrected OCR must retain the original text for review",
+                books.all { it.raw_title == null || it.raw_title != it.title }
             )
             assertEquals("OCR should not return duplicate text candidates", books.size, recognizedText.distinct().size)
             assertTrue(

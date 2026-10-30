@@ -4,13 +4,16 @@ import android.content.Context
 import androidx.work.*
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.homebooks.android.data.api.CatalogMetadataClient
 import com.homebooks.android.data.api.ApiConstants
 import com.homebooks.android.data.api.BooksApiService
 import com.homebooks.android.data.local.AppDatabase
 import com.homebooks.android.data.local.entity.BookEntity
 import com.homebooks.android.data.local.entity.PendingMutationEntity
 import com.homebooks.android.data.model.Book
+import com.homebooks.android.data.model.BookMetadataCandidate
 import com.homebooks.android.data.model.RecognizedBook
+import com.homebooks.android.data.model.withMetadataCandidate
 import com.homebooks.android.data.worker.SyncWorker
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -33,6 +36,7 @@ class BooksRepository(
     private val bookDao = db.bookDao()
     private val pendingMutationDao = db.pendingMutationDao()
     private val gson = Gson()
+    private val catalogMetadataClient = CatalogMetadataClient()
 
     init {
         scheduleSync()
@@ -93,6 +97,30 @@ class BooksRepository(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    suspend fun findMetadataCandidates(book: Book): Result<List<BookMetadataCandidate>> =
+        withContext(Dispatchers.IO) {
+            catalogMetadataClient.search(book)
+        }
+
+    suspend fun acceptMetadataCandidate(
+        book: Book,
+        candidate: BookMetadataCandidate
+    ): Result<Book> {
+        val id = book.id
+            ?: return Result.failure(IllegalArgumentException("Book has no library ID"))
+        val updatedBook = book.withMetadataCandidate(candidate)
+        return updateBook(
+            id = id,
+            title = updatedBook.title,
+            author = updatedBook.author,
+            barcode = updatedBook.barcode,
+            releaseDate = updatedBook.release_date,
+            description = updatedBook.description,
+            imageFiles = emptyList(),
+            removedImages = emptyList()
+        )
     }
 
     suspend fun addBook(

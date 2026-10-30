@@ -28,6 +28,7 @@ enum class ImportStatus {
 data class ShelfReviewItem(
     val id: String = java.util.UUID.randomUUID().toString(),
     var title: String,
+    val originalTitle: String?,
     var author: String,
     val releaseDate: String,
     val description: String,
@@ -77,6 +78,7 @@ fun BookshelfReviewScreen(
 
                     ShelfReviewItem(
                         title = title,
+                        originalTitle = book.raw_title,
                         author = author,
                         releaseDate = book.release_date ?: "",
                         description = book.description ?: "",
@@ -317,6 +319,15 @@ fun ShelfReviewCard(
                 singleLine = true,
                 enabled = item.importStatus == ImportStatus.IDLE
             )
+
+            if (!item.originalTitle.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Original OCR: ${item.originalTitle}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 

@@ -70,6 +70,9 @@ dependencies {
     // Bundled on-device OCR; works without downloading a model at runtime.
     implementation("com.google.mlkit:text-recognition:16.0.1")
 
+    // MIT-licensed SymSpell implementation for local OCR word correction.
+    implementation("io.gitlab.rxp90:jsymspell:1.0")
+
     // Google Mobile Ads (AdMob)
     implementation("com.google.android.gms:play-services-ads:22.6.0")
 

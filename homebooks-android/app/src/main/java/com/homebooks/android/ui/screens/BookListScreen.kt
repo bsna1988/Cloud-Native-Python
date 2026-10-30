@@ -21,6 +21,10 @@ import com.homebooks.android.R
 import com.homebooks.android.data.model.Book
 import com.homebooks.android.ui.viewmodel.BooksViewModel
 import com.homebooks.android.ui.viewmodel.UiState
+import androidx.compose.runtime.saveable.rememberSaveable
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
@@ -43,15 +47,51 @@ fun BookListScreen(
     var searchQuery by remember { mutableStateOf("") }
     var showScanShelfDialog by remember { mutableStateOf(false) }
     var bookToDelete by remember { mutableStateOf<Book?>(null) }
-    var cameraFile by remember { mutableStateOf<File?>(null) }
+    var cameraFilePath by rememberSaveable { mutableStateOf<String?>(null) }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
-        if (success && cameraFile != null) {
-            val file = cameraFile!!
-            viewModel.recognizeShelf(listOf(file))
-            onScanShelfComplete()
+        val path = cameraFilePath
+        if (success && path != null) {
+            val file = File(path)
+            if (file.exists()) {
+                viewModel.recognizeShelf(listOf(file))
+                onScanShelfComplete()
+            }
+        }
+    }
+
+    fun launchCameraInternal() {
+        try {
+            val file = File(context.cacheDir, "shelf_cam_${System.currentTimeMillis()}.jpg")
+            file.createNewFile()
+            cameraFilePath = file.absolutePath
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            cameraLauncher.launch(uri)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            launchCameraInternal()
+        }
+    }
+
+    fun startCameraCapture() {
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasPermission) {
+            launchCameraInternal()
+        } else {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
@@ -106,10 +146,7 @@ fun BookListScreen(
             confirmButton = {
                 TextButton(onClick = {
                     showScanShelfDialog = false
-                    val file = File(context.cacheDir, "shelf_cam_${System.currentTimeMillis()}.jpg")
-                    cameraFile = file
-                    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-                    cameraLauncher.launch(uri)
+                    startCameraCapture()
                 }) {
                     Text("Take Photo")
                 }

@@ -168,11 +168,13 @@ object OnDeviceRecognitionEngine {
         for (block in textBlocks) {
             val text = normalizeOcrText(block)
             if (!isCandidateSpineText(text)) continue
+            val correctedText = LocalOcrTextCorrector.correct(text)
 
             candidates.putIfAbsent(
-                text.lowercase(),
+                correctedText.lowercase(),
                 RecognizedBook(
-                    title = text,
+                    title = correctedText,
+                    raw_title = text.takeIf { correctedText != text },
                     author = "",
                     barcode = null,
                     release_date = "",

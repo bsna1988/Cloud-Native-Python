@@ -7,11 +7,14 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.homebooks.android.data.model.Book
+import com.homebooks.android.data.model.BookMetadataCandidate
 import com.homebooks.android.data.model.RecognizedBook
+import com.homebooks.android.data.model.isMetadataIncomplete
 import com.homebooks.android.data.repository.BooksRepository
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import java.io.File
 import java.util.UUID
 
@@ -52,6 +55,11 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _selectedBook = MutableLiveData<Book?>()
     val selectedBook: LiveData<Book?> get() = _selectedBook
+
+    private val _metadataCandidatesState = MutableLiveData<UiState>(UiState.Idle)
+    val metadataCandidatesState: LiveData<UiState> get() = _metadataCandidatesState
+    private var metadataLookupJob: Job? = null
+    private var metadataLookupKey: String? = null
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> get() = _error
@@ -180,9 +188,62 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
             val result = _repository.getBook(id)
             result.onSuccess { book ->
                 _selectedBook.value = book
+                loadMetadataCandidates(book)
             }.onFailure { exception ->
                 _error.value = exception.message ?: "Failed to load book"
             }
+        }
+    }
+
+    fun loadMetadataCandidates(book: Book) {
+        if (!book.isMetadataIncomplete()) {
+            metadataLookupJob?.cancel()
+            metadataLookupJob = null
+            metadataLookupKey = null
+            _metadataCandidatesState.value = UiState.Idle
+            return
+        }
+
+        val lookupKey = listOf(
+            book.id,
+            book.title,
+            book.author,
+            book.barcode,
+            book.release_date,
+            book.description
+        ).joinToString("|")
+        if (metadataLookupKey == lookupKey) return
+
+        metadataLookupKey = lookupKey
+        metadataLookupJob?.cancel()
+        _metadataCandidatesState.value = UiState.Loading
+        metadataLookupJob = viewModelScope.launch {
+            _repository.findMetadataCandidates(book)
+                .onSuccess { candidates ->
+                    _metadataCandidatesState.value = UiState.Success(candidates)
+                }
+                .onFailure { exception ->
+                    _metadataCandidatesState.value = UiState.Error(
+                        exception.message ?: "Metadata lookup failed"
+                    )
+                }
+        }
+    }
+
+    fun acceptMetadataCandidate(book: Book, candidate: BookMetadataCandidate) {
+        _metadataCandidatesState.value = UiState.Loading
+        viewModelScope.launch {
+            _repository.acceptMetadataCandidate(book, candidate)
+                .onSuccess { updatedBook ->
+                    _selectedBook.value = updatedBook
+                    _metadataCandidatesState.value = UiState.Idle
+                    metadataLookupKey = null
+                }
+                .onFailure { exception ->
+                    val message = exception.message ?: "Failed to apply metadata"
+                    _metadataCandidatesState.value = UiState.Error(message)
+                    _error.value = message
+                }
         }
     }
 

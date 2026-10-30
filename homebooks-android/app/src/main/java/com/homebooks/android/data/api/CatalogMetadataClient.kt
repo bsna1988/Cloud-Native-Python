@@ -17,15 +17,12 @@ class CatalogMetadataClient(
         if (book.title.isBlank() && book.author.isBlank() && book.barcode.isNullOrBlank()) {
             Result.success(emptyList())
         } else {
-            val googleResult = runCatching { requestGoogleBooks(book) }
             val openLibraryResult = runCatching { requestOpenLibrary(book) }
-            if (googleResult.isFailure && openLibraryResult.isFailure) {
-                throw googleResult.exceptionOrNull()
-                    ?: openLibraryResult.exceptionOrNull()
-                    ?: IOException("Catalog lookup failed")
+            if (openLibraryResult.isFailure) {
+                throw openLibraryResult.exceptionOrNull()
+                    ?: IOException("Open Library lookup failed")
             }
-            val candidates = (googleResult.getOrDefault(emptyList()) +
-                openLibraryResult.getOrDefault(emptyList()))
+            val candidates = openLibraryResult.getOrDefault(emptyList())
                 .distinctBy { candidate ->
                     listOf(
                         candidate.title.trim().lowercase(),
@@ -33,13 +30,6 @@ class CatalogMetadataClient(
                         candidate.releaseDate.orEmpty().trim().lowercase()
                     ).joinToString("|")
                 }
-            if (candidates.isEmpty() &&
-                (googleResult.isFailure || openLibraryResult.isFailure)
-            ) {
-                throw googleResult.exceptionOrNull()
-                    ?: openLibraryResult.exceptionOrNull()
-                    ?: IOException("Catalog lookup failed")
-            }
             Result.success(candidates)
         }
     } catch (exception: Exception) {

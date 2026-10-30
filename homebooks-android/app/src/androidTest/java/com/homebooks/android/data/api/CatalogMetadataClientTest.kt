@@ -17,7 +17,7 @@ import org.junit.runner.RunWith
 class CatalogMetadataClientTest {
 
     @Test
-    fun searchesBothPublicCatalogsWithoutBackendApiKeyAndMapsCandidates() {
+    fun searchesOpenLibraryWithoutBackendApiKeyAndMapsCandidates() {
         val requests = mutableListOf<String>()
         val client = OkHttpClient.Builder()
             .addInterceptor { chain ->
@@ -25,15 +25,6 @@ class CatalogMetadataClientTest {
                 assertFalse(request.headers.names().contains("X-API-Key"))
                 requests += request.url.host
                 val body = when (request.url.host) {
-                    "www.googleapis.com" -> """
-                        {"items":[{"volumeInfo":{
-                          "title":"Catalog title",
-                          "authors":["Catalog author"],
-                          "publishedDate":"2024",
-                          "description":"Google description",
-                          "industryIdentifiers":[{"type":"ISBN_13","identifier":"9781234567890"}]
-                        }}]}
-                    """.trimIndent()
                     "openlibrary.org" -> """
                         {"docs":[{"title":"Another title","author_name":["Other author"],
                           "first_publish_year":1998,"isbn":["0123456789"]}]}
@@ -53,30 +44,25 @@ class CatalogMetadataClientTest {
         val result = CatalogMetadataClient(client).search(Book(title = "Existing title"))
 
         assertTrue("Lookup failed: ${result.exceptionOrNull()?.message}", result.isSuccess)
-        assertEquals(setOf("www.googleapis.com", "openlibrary.org"), requests.toSet())
+        assertEquals(listOf("openlibrary.org"), requests)
         val candidates = result.getOrThrow()
-        assertEquals(2, candidates.size)
-        assertEquals("Catalog author", candidates.first().author)
-        assertEquals("9781234567890", candidates.first().barcode)
-        assertEquals("2024", candidates.first().releaseDate)
-        assertEquals("Google Books", candidates.first().source)
-        assertEquals("Open Library", candidates.last().source)
+        assertEquals(1, candidates.size)
+        assertEquals("Other author", candidates.first().author)
+        assertEquals("0123456789", candidates.first().barcode)
+        assertEquals("1998", candidates.first().releaseDate)
+        assertEquals("Open Library", candidates.first().source)
     }
 
     @Test
-    fun reportsFailureWhenNoCandidatesAndAProviderFails() {
+    fun reportsFailureWhenOpenLibraryFails() {
         val client = OkHttpClient.Builder()
             .addInterceptor { chain ->
-                val request = chain.request()
                 Response.Builder()
-                    .request(request)
+                    .request(chain.request())
                     .protocol(Protocol.HTTP_1_1)
-                    .code(if (request.url.host == "www.googleapis.com") 503 else 200)
-                    .message(if (request.url.host == "www.googleapis.com") "Unavailable" else "OK")
-                    .body(
-                        (if (request.url.host == "www.googleapis.com") "" else """{"docs":[]}""")
-                            .toResponseBody()
-                    )
+                    .code(503)
+                    .message("Unavailable")
+                    .body("".toResponseBody())
                     .build()
             }
             .build()

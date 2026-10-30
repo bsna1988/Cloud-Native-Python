@@ -79,7 +79,7 @@ the Android bookshelf flow performs image text recognition on-device.
 
 ## 📖 Catalog Metadata Candidates (ADR 0008)
 
-The Android book detail page looks up incomplete records directly with Google Books and Open Library. Matches are shown with their source and can be accepted explicitly; acceptance updates the local record through the normal offline-first repository and sync path. Complete records are not searched. Lookup errors do not block viewing or manual editing.
+The Android book detail page looks up incomplete records directly with Open Library. Google Books requests are temporarily disabled. Matches are shown with their source and can be accepted explicitly; acceptance updates the local record through the normal offline-first repository and sync path. Complete records are not searched. Lookup errors do not block viewing or manual editing.
 
 ---
 

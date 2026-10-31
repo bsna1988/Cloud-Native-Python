@@ -307,9 +307,10 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
         _bookshelfRecognitionState.value = UiState.Idle
     }
 
-    fun deleteBook(id: Int) {
+    fun deleteBook(id: Int, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             val result = _repository.deleteBook(id)
+            result.onSuccess { onSuccess() }
             result.onFailure { exception ->
                 _error.value = exception.message ?: "Failed to delete book"
             }

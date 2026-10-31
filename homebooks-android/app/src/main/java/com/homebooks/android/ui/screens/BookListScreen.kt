@@ -1,13 +1,11 @@
 package com.homebooks.android.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -52,7 +50,6 @@ fun BookListScreen(
     }
     var searchQuery by remember { mutableStateOf("") }
     var showScanShelfDialog by remember { mutableStateOf(false) }
-    var bookToDelete by remember { mutableStateOf<Book?>(null) }
     var cameraFilePath by rememberSaveable { mutableStateOf<String?>(null) }
 
     val cameraLauncher = rememberLauncherForActivityResult(
@@ -117,31 +114,6 @@ fun BookListScreen(
                 onScanShelfComplete()
             } catch (_: Exception) {}
         }
-    }
-
-    if (bookToDelete != null) {
-        val book = bookToDelete!!
-        AlertDialog(
-            onDismissRequest = { bookToDelete = null },
-            title = { Text("Delete Book") },
-            text = { Text("Are you sure you want to delete \"${book.title}\"? This action cannot be undone.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        book.id?.let { viewModel.deleteBook(it) }
-                        bookToDelete = null
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Delete")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { bookToDelete = null }) {
-                    Text("Cancel")
-                }
-            }
-        )
     }
 
     if (showScanShelfDialog) {
@@ -340,41 +312,9 @@ fun BookListScreen(
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 items(filteredBooks, key = { it.id ?: it.hashCode() }) { book ->
-                                    val dismissState = rememberDismissState(
-                                        confirmValueChange = { dismissValue ->
-                                            if (dismissValue == DismissValue.DismissedToStart) {
-                                                bookToDelete = book
-                                            }
-                                            false
-                                        }
-                                    )
-                                    SwipeToDismiss(
-                                        state = dismissState,
-                                        directions = setOf(DismissDirection.EndToStart),
-                                        background = {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .background(
-                                                        MaterialTheme.colorScheme.errorContainer,
-                                                        shape = MaterialTheme.shapes.medium
-                                                    )
-                                                    .padding(horizontal = 20.dp),
-                                                contentAlignment = Alignment.CenterEnd
-                                            ) {
-                                                Icon(
-                                                    Icons.Default.Delete,
-                                                    contentDescription = "Delete",
-                                                    tint = MaterialTheme.colorScheme.onErrorContainer
-                                                )
-                                            }
-                                        },
-                                        dismissContent = {
-                                            BookItemCard(book = book, onClick = {
-                                                book.id?.let { onBookClick(it) }
-                                            })
-                                        }
-                                    )
+                                    BookItemCard(book = book, onClick = {
+                                        book.id?.let { onBookClick(it) }
+                                    })
                                 }
                             }
                         }

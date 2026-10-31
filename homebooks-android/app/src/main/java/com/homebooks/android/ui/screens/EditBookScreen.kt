@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -61,6 +62,7 @@ fun EditBookScreen(
     val screenScope = rememberCoroutineScope()
     var isCorrectingText by remember { mutableStateOf(false) }
     var selectedCandidateThumbnail by remember(bookId) { mutableStateOf<String?>(null) }
+    var showRemoveConfirmation by remember { mutableStateOf(false) }
 
     LaunchedEffect(bookId) {
         viewModel.loadBook(bookId)
@@ -120,6 +122,27 @@ fun EditBookScreen(
         }
     }
 
+    val canSave = !isCorrectingText && title.isNotBlank() && author.isNotBlank()
+    val saveChanges = {
+        if (canSave) {
+            viewModel.updateBook(
+                id = bookId,
+                title = title,
+                author = author,
+                barcode = barcode.takeIf { it.isNotBlank() },
+                releaseDate = releaseDate,
+                description = description,
+                imageFiles = newFiles,
+                removedImages = removedImages,
+                remoteImageUrls = listOfNotNull(
+                    selectedCandidateThumbnail?.takeIf(String::isNotBlank)
+                )
+            ) {
+                onBookUpdated()
+            }
+        }
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -128,6 +151,14 @@ fun EditBookScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    TextButton(
+                        onClick = { saveChanges() },
+                        enabled = canSave
+                    ) {
+                        Text("Save Changes")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -155,8 +186,8 @@ fun EditBookScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                if (existingImages.isNotEmpty()) {
-                    Text("Existing Images:", style = MaterialTheme.typography.titleSmall)
+                if (existingImages.isNotEmpty() || !selectedCandidateThumbnail.isNullOrBlank()) {
+                    Text("Book Images:", style = MaterialTheme.typography.titleSmall)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -183,6 +214,32 @@ fun EditBookScreen(
                                     Icon(
                                         Icons.Default.Close,
                                         contentDescription = "Remove existing image",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                        }
+                        selectedCandidateThumbnail?.takeIf(String::isNotBlank)?.let { imageUrl ->
+                            Box(modifier = Modifier.size(width = 72.dp, height = 104.dp)) {
+                                AsyncImage(
+                                    model = imageUrl,
+                                    contentDescription = "Selected catalog cover preview",
+                                    placeholder = painterResource(id = R.drawable.ic_book_placeholder),
+                                    error = painterResource(id = R.drawable.ic_book_placeholder),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(MaterialTheme.shapes.small),
+                                    contentScale = ContentScale.Crop
+                                )
+                                IconButton(
+                                    onClick = { selectedCandidateThumbnail = null },
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .size(24.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Remove selected catalog cover",
                                         tint = MaterialTheme.colorScheme.error
                                     )
                                 }
@@ -425,31 +482,48 @@ fun EditBookScreen(
                 )
 
                 Button(
-                    onClick = {
-                        if (title.isNotBlank() && author.isNotBlank()) {
-                            viewModel.updateBook(
-                                id = bookId,
-                                title = title,
-                                author = author,
-                                barcode = barcode.takeIf { it.isNotBlank() },
-                                releaseDate = releaseDate,
-                                description = description,
-                                imageFiles = newFiles,
-                                removedImages = removedImages,
-                                remoteImageUrls = listOfNotNull(selectedCandidateThumbnail)
-                            ) {
-                                onBookUpdated()
-                            }
-                        }
-                    },
+                    onClick = { showRemoveConfirmation = true },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = !isCorrectingText && title.isNotBlank() && author.isNotBlank()
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
                 ) {
-                    Text("Save Changes")
+                    Icon(Icons.Default.Delete, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Remove Book")
                 }
             }
         }
 
+    }
+
+    if (showRemoveConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showRemoveConfirmation = false },
+            title = { Text("Remove Book") },
+            text = {
+                Text("Are you sure you want to remove \"${book?.title.orEmpty()}\"? This action cannot be undone.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showRemoveConfirmation = false
+                        viewModel.deleteBook(bookId, onSuccess = onBookUpdated)
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Remove")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRemoveConfirmation = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 

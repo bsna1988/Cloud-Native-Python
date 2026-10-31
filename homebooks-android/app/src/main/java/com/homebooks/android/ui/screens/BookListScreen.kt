@@ -323,7 +323,11 @@ fun BookListScreen(
                             ) {
                                 items(filteredBooks, key = { it.id ?: it.hashCode() }) { book ->
                                     BookItemCard(book = book, onClick = {
-                                        book.id?.let { onBookClick(it) }
+                                        book.id?.let { bookId ->
+                                            viewModel.markBookReviewed(bookId) {
+                                                onBookClick(bookId)
+                                            }
+                                        }
                                     })
                                 }
                             }
@@ -379,7 +383,13 @@ fun BookItemCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(
+            containerColor = if (book.needsReview) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(

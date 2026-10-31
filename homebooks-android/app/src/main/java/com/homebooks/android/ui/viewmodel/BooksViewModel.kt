@@ -198,6 +198,15 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun markBookReviewed(id: Int, onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            _repository.markBookReviewed(id).onFailure { exception ->
+                _error.value = exception.message ?: "Failed to mark book as reviewed"
+            }
+            onComplete()
+        }
+    }
+
     fun searchMetadataCandidates(book: Book) {
         if (book.title.isBlank() && book.author.isBlank() && book.barcode.isNullOrBlank()) {
             _metadataCandidatesState.value = UiState.Error(

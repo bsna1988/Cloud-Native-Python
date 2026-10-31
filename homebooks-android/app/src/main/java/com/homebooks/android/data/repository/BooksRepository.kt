@@ -67,7 +67,8 @@ class BooksRepository(
             release_date = entity.releaseDate,
             description = entity.description,
             thumbnail = addApiBaseToUrl(entity.thumbnail),
-            images = rawImages.mapNotNull { addApiBaseToUrl(it) }
+            images = rawImages.mapNotNull { addApiBaseToUrl(it) },
+            needsReview = entity.needsReview
         )
     }
 
@@ -94,6 +95,23 @@ class BooksRepository(
             } else {
                 Result.failure(Exception("Book not found"))
             }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun markBookReviewed(id: Int): Result<Unit> {
+        return try {
+            val entity = bookDao.getBookByServerId(id)
+                ?: bookDao.getBooksList().find {
+                    it.uuid.hashCode() == id || it.uuid == id.toString()
+                }
+                ?: throw Exception("Book not found")
+
+            if (entity.needsReview) {
+                bookDao.updateBook(entity.copy(needsReview = false))
+            }
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -146,7 +164,8 @@ class BooksRepository(
                 description = description,
                 thumbnail = imagesList.firstOrNull(),
                 imagesJson = gson.toJson(imagesList),
-                syncState = "PENDING_CREATE"
+                syncState = "PENDING_CREATE",
+                needsReview = true
             )
             bookDao.insertBook(entity)
 

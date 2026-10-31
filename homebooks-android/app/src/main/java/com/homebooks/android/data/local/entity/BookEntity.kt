@@ -17,5 +17,6 @@ data class BookEntity(
     val imagesJson: String = "[]",
     val syncState: String = "SYNCED",
     val isDeleted: Boolean = false,
+    val needsReview: Boolean = false,
     val updatedAt: Long = System.currentTimeMillis()
 )

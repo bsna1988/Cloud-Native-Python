@@ -8,7 +8,8 @@ data class Book(
     val release_date: String = "",
     val description: String = "",
     val thumbnail: String? = null,
-    val images: List<String> = emptyList()
+    val images: List<String> = emptyList(),
+    @Transient val needsReview: Boolean = false
 )
 
 data class ApiResponse(

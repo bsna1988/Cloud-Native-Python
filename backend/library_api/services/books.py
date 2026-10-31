@@ -46,6 +46,13 @@ def create_book(book, uploaded_files):
     saved_paths = []
     image_urls = []
 
+    # Include remote hosted image URLs passed in payload
+    remote_urls = [
+        url for url in (book.get("image_urls") or book.get("images") or [])
+        if isinstance(url, str) and (url.startswith("http://") or url.startswith("https://"))
+    ]
+    image_urls.extend(remote_urls)
+
     try:
         for uploaded_file in uploaded_files:
             original_name = secure_filename(uploaded_file.filename or "")
@@ -81,9 +88,10 @@ def delete_book(book_id):
         return None
     upload_folder = Path(current_app.config["UPLOAD_FOLDER"])
     for image_url in result["image_urls"]:
-        filename = image_url.split("/")[-1]
-        file_path = upload_folder / filename
-        file_path.unlink(missing_ok=True)
+        if image_url.startswith("/uploads/"):
+            filename = image_url.split("/")[-1]
+            file_path = upload_folder / filename
+            file_path.unlink(missing_ok=True)
     return result["book"]
 
 
@@ -96,6 +104,13 @@ def update_book(book_id, book, uploaded_files, removed_image_urls):
     upload_folder = Path(current_app.config["UPLOAD_FOLDER"])
     saved_paths = []
     new_image_urls = []
+
+    # Include remote hosted image URLs passed in payload
+    remote_urls = [
+        url for url in (book.get("image_urls") or book.get("images") or [])
+        if isinstance(url, str) and (url.startswith("http://") or url.startswith("https://"))
+    ]
+    new_image_urls.extend(remote_urls)
 
     try:
         for uploaded_file in uploaded_files:
@@ -125,9 +140,10 @@ def update_book(book_id, book, uploaded_files, removed_image_urls):
             return None
 
         for image_url in removed_image_urls:
-            filename = image_url.split("/")[-1]
-            file_path = upload_folder / filename
-            file_path.unlink(missing_ok=True)
+            if image_url.startswith("/uploads/"):
+                filename = image_url.split("/")[-1]
+                file_path = upload_folder / filename
+                file_path.unlink(missing_ok=True)
 
         return updated_book
 

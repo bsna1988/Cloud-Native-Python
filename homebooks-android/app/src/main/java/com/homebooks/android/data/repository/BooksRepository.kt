@@ -111,6 +111,7 @@ class BooksRepository(
         val id = book.id
             ?: return Result.failure(IllegalArgumentException("Book has no library ID"))
         val updatedBook = book.withMetadataCandidate(candidate)
+        val remoteUrls = listOfNotNull(candidate.thumbnail).filter(String::isNotBlank)
         return updateBook(
             id = id,
             title = updatedBook.title,
@@ -119,7 +120,8 @@ class BooksRepository(
             releaseDate = updatedBook.release_date,
             description = updatedBook.description,
             imageFiles = emptyList(),
-            removedImages = emptyList()
+            removedImages = emptyList(),
+            remoteImageUrls = remoteUrls
         )
     }
 
@@ -180,7 +182,8 @@ class BooksRepository(
         releaseDate: String,
         description: String,
         imageFiles: List<File>,
-        removedImages: List<String>
+        removedImages: List<String>,
+        remoteImageUrls: List<String> = emptyList()
     ): Result<Book> {
         return try {
             val entity = bookDao.getBookByServerId(id) ?: bookDao.getBooksList().find { it.uuid.hashCode() == id || it.uuid == id.toString() }
@@ -194,7 +197,9 @@ class BooksRepository(
             }
 
             val newImagePaths = imageFiles.map { it.absolutePath }
-            val updatedImages = (currentImages.filter { !removedImages.contains(it) }) + newImagePaths
+            val filteredCurrent = currentImages.filter { !removedImages.contains(it) }
+            val newRemoteUrls = remoteImageUrls.filter { !filteredCurrent.contains(it) }
+            val updatedImages = filteredCurrent + newImagePaths + newRemoteUrls
 
             val updatedEntity = entity.copy(
                 title = title,
@@ -214,6 +219,12 @@ class BooksRepository(
                 if (barcode != null && barcode.isNotBlank()) put("barcode", barcode)
                 put("release_date", releaseDate)
                 put("description", description)
+                val remoteUrls = updatedImages.filter { it.startsWith("http://") || it.startsWith("https://") }
+                if (remoteUrls.isNotEmpty()) {
+                    val jsonArray = org.json.JSONArray()
+                    remoteUrls.forEach { jsonArray.put(it) }
+                    put("image_urls", jsonArray)
+                }
             }.toString()
 
             val existingMutations = pendingMutationDao.getMutationsForBook(entity.uuid)
@@ -229,7 +240,7 @@ class BooksRepository(
                     bookUuid = entity.uuid,
                     operationType = "UPDATE",
                     payloadJson = payloadJson,
-                    localImagePathsJson = gson.toJson(newImagePaths),
+                    localImagePathsJson = gson.toJson(updatedImages),
                     removedImagesJson = gson.toJson(removedImages)
                 )
                 pendingMutationDao.insertMutation(mutation)

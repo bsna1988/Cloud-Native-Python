@@ -26,9 +26,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.homebooks.android.R
-import com.homebooks.android.data.model.BookMetadataCandidate
-import com.homebooks.android.data.model.isMetadataIncomplete
-import com.homebooks.android.ui.viewmodel.UiState
 import com.homebooks.android.ui.viewmodel.BooksViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,21 +37,10 @@ fun BookDetailScreen(
     onBackClick: () -> Unit
 ) {
     val book by viewModel.selectedBook.observeAsState(null)
-    val metadataCandidatesState by viewModel.metadataCandidatesState.observeAsState(UiState.Idle)
     var fullscreenIndex by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(bookId) {
         viewModel.loadBook(bookId)
-    }
-    LaunchedEffect(
-        book?.id,
-        book?.title,
-        book?.author,
-        book?.barcode,
-        book?.release_date,
-        book?.description
-    ) {
-        book?.let(viewModel::loadMetadataCandidates)
     }
 
     Scaffold(
@@ -184,59 +170,6 @@ fun BookDetailScreen(
                         }
                     }
                 }
-
-                if (currentBook.isMetadataIncomplete()) {
-                    Divider()
-                    Text(
-                        text = "Complete book details",
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                    Text(
-                        text = "Choose a catalog match to replace the book details it provides.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    when (val state = metadataCandidatesState) {
-                        is UiState.Loading -> {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                                Text("Searching Google Books and Open Library…")
-                            }
-                        }
-                        is UiState.Error -> {
-                            Text(
-                                text = "Catalog lookup failed: ${state.message}",
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                        is UiState.Success<*> -> {
-                            val candidates = (state.data as? List<*>)
-                                ?.filterIsInstance<BookMetadataCandidate>()
-                                .orEmpty()
-                            if (candidates.isEmpty()) {
-                                Text(
-                                    text = "No catalog matches found. You can still edit this book.",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            } else {
-                                candidates.forEach { candidate ->
-                                    MetadataCandidateCard(
-                                        candidate = candidate,
-                                        enabled = metadataCandidatesState !is UiState.Loading,
-                                        onAccept = {
-                                            viewModel.acceptMetadataCandidate(currentBook, candidate)
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                        else -> Unit
-                    }
-                }
             }
 
             fullscreenIndex?.let { index ->
@@ -250,47 +183,7 @@ fun BookDetailScreen(
     }
 }
 
-@Composable
-private fun MetadataCandidateCard(
-    candidate: BookMetadataCandidate,
-    enabled: Boolean,
-    onAccept: () -> Unit
-) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(candidate.title, style = MaterialTheme.typography.titleMedium)
-            candidate.author?.takeIf(String::isNotBlank)?.let {
-                Text("Author: $it", style = MaterialTheme.typography.bodyMedium)
-            }
-            candidate.releaseDate?.takeIf(String::isNotBlank)?.let {
-                Text("Published: $it", style = MaterialTheme.typography.bodySmall)
-            }
-            candidate.barcode?.takeIf(String::isNotBlank)?.let {
-                Text("ISBN: $it", style = MaterialTheme.typography.bodySmall)
-            }
-            candidate.description?.takeIf(String::isNotBlank)?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 4
-                )
-            }
-            Text(
-                text = candidate.source,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Button(onClick = onAccept, enabled = enabled) {
-                Text("Use this match")
-            }
-        }
-    }
-}
+
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

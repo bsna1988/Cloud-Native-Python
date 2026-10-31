@@ -60,7 +60,8 @@ object OnDeviceRecognitionEngine {
                                         author = "",
                                         barcode = barcode,
                                         release_date = "",
-                                        description = "Barcode recognized on-device."
+                                        description = "Barcode recognized on-device.",
+                                        thumbnail = file.absolutePath
                                     )
                                 )
                                 continue
@@ -87,7 +88,8 @@ object OnDeviceRecognitionEngine {
                             author = "",
                             barcode = null,
                             release_date = "",
-                            description = "Text recognized on-device. Verify title and author."
+                            description = "Text recognized on-device. Verify title and author.",
+                            thumbnail = file.absolutePath
                         )
                     )
                 }
@@ -131,7 +133,8 @@ object OnDeviceRecognitionEngine {
                 val image = InputImage.fromFilePath(context, Uri.fromFile(file))
                 addOcrCandidates(
                     candidatesByText,
-                    Tasks.await(recognizer.process(image)).textBlocks.map { it.text }
+                    Tasks.await(recognizer.process(image)).textBlocks.map { it.text },
+                    file.absolutePath
                 )
 
                 if (candidatesByText.size >= MAX_SHELF_CANDIDATES) break
@@ -163,7 +166,8 @@ object OnDeviceRecognitionEngine {
 
     private fun addOcrCandidates(
         candidates: MutableMap<String, RecognizedBook>,
-        textBlocks: List<String>
+        textBlocks: List<String>,
+        imagePath: String? = null
     ) {
         for (block in textBlocks) {
             val text = normalizeOcrText(block)
@@ -178,7 +182,8 @@ object OnDeviceRecognitionEngine {
                     author = "",
                     barcode = null,
                     release_date = "",
-                    description = "Text recognized on-device. Verify title and author."
+                    description = "Text recognized on-device. Verify title and author.",
+                    thumbnail = imagePath
                 )
             )
             if (candidates.size >= MAX_SHELF_CANDIDATES) return

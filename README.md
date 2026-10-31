@@ -79,7 +79,7 @@ the Android bookshelf flow performs image text recognition on-device.
 
 ## 📖 Catalog Metadata Candidates (ADR 0008)
 
-The Android book detail page looks up incomplete records directly with Open Library. Google Books requests are temporarily disabled. Matches are shown with their source and can be accepted explicitly; acceptance updates the local record through the normal offline-first repository and sync path. Complete records are not searched. Lookup errors do not block viewing or manual editing.
+The Android book edit page can search Google Books and Open Library only when the user taps **Search book catalogs**; opening or viewing a book does not make catalog requests. Google Books searches use the plain title as the `q` value (or ISBN when a barcode is available). Add `googleBooksApiKey=YOUR_KEY` to `homebooks-android/local.properties` (or provide `GOOGLE_BOOKS_API_KEY` in the build environment) to use the registered Google Books API key. Choosing a match fills the edit form for review; changes are persisted only when the user saves. The **Aggressively fix spelling mistakes** action also works locally on title, author, and description, leaving barcode and release date unchanged; review any correction before saving. If one provider fails, results from the other are still shown.
 
 ---
 

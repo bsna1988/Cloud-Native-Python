@@ -14,6 +14,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import com.homebooks.android.data.model.Book
 import com.homebooks.android.data.model.RecognizedBook
 import com.homebooks.android.ui.viewmodel.BooksViewModel
@@ -33,6 +36,7 @@ data class ShelfReviewItem(
     val releaseDate: String,
     val description: String,
     val barcode: String?,
+    val imagePath: String? = null,
     var isSelected: Boolean,
     val isDuplicate: Boolean,
     var importStatus: ImportStatus = ImportStatus.IDLE,
@@ -83,6 +87,7 @@ fun BookshelfReviewScreen(
                         releaseDate = book.release_date ?: "",
                         description = book.description ?: "",
                         barcode = barcode,
+                        imagePath = book.thumbnail,
                         isSelected = !isDuplicate,
                         isDuplicate = isDuplicate
                     )
@@ -128,13 +133,18 @@ fun BookshelfReviewScreen(
                                             if (it.id == item.id) it.copy(importStatus = ImportStatus.IMPORTING) else it
                                         }
 
+                                        val imageFiles = item.imagePath?.let { path ->
+                                            val file = File(path)
+                                            if (file.exists()) listOf(file) else emptyList()
+                                        } ?: emptyList()
+
                                         val result = viewModel.addBookSync(
                                             title = item.title,
                                             author = item.author,
                                             barcode = item.barcode,
                                             releaseDate = item.releaseDate,
                                             description = item.description,
-                                            imageFiles = emptyList<File>()
+                                            imageFiles = imageFiles
                                         )
 
                                         reviewItems = reviewItems.map {
@@ -271,6 +281,17 @@ fun ShelfReviewCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                if (!item.imagePath.isNullOrBlank()) {
+                    AsyncImage(
+                        model = File(item.imagePath),
+                        contentDescription = "Bookshelf Image",
+                        modifier = Modifier
+                            .size(50.dp)
+                            .clip(MaterialTheme.shapes.small),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
                 Checkbox(
                     checked = item.isSelected,
                     onCheckedChange = { onChanged(item.copy(isSelected = it)) },

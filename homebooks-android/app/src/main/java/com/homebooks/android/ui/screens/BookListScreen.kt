@@ -8,11 +8,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -44,6 +46,10 @@ fun BookListScreen(
     val booksState by viewModel.booksState.observeAsState(UiState.Loading)
     val errorMessage by viewModel.error.observeAsState(null)
     val pendingCount by viewModel.pendingCount.observeAsState(0)
+    val libraryBooks = when (val state = booksState) {
+        is UiState.Success<*> -> (state.data as? List<*>)?.filterIsInstance<Book>().orEmpty()
+        else -> emptyList()
+    }
     var searchQuery by remember { mutableStateOf("") }
     var showScanShelfDialog by remember { mutableStateOf(false) }
     var bookToDelete by remember { mutableStateOf<Book?>(null) }
@@ -169,13 +175,17 @@ fun BookListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(text = "HomeBooks") },
-                actions = {
-                    TextButton(onClick = { showScanShelfDialog = true }) {
-                        Text("Scan Bookshelf", color = MaterialTheme.colorScheme.onPrimaryContainer)
-                    }
-                    TextButton(onClick = onBulkScanClick) {
-                        Text("Bulk Scan", color = MaterialTheme.colorScheme.onPrimaryContainer)
+                title = {
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Text(
+                            text = "HomeBooks",
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Text(
+                            text = "YOUR PERSONAL LIBRARY",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -195,14 +205,95 @@ fun BookListScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "A home for every story",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = "Keep your favorite reads close.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
+                        )
+                    }
+                    Surface(
+                        shape = MaterialTheme.shapes.medium,
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = libraryBooks.size.toString(),
+                                style = MaterialTheme.typography.titleLarge,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = if (libraryBooks.size == 1) "BOOK" else "BOOKS",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { showScanShelfDialog = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Scan bookshelf", maxLines = 1)
+                }
+                OutlinedButton(
+                    onClick = onBulkScanClick,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Scan ISBNs", maxLines = 1)
+                }
+            }
+
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                label = { Text("Search books...") },
+                label = { Text("Find a title or author") },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                singleLine = true
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                singleLine = true,
+                shape = MaterialTheme.shapes.medium
             )
 
             if (pendingCount > 0) {
@@ -243,8 +334,7 @@ fun BookListScreen(
                         CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                     }
                     is UiState.Success<*> -> {
-                        val books = (state.data as? List<*>)?.filterIsInstance<Book>() ?: emptyList()
-                        val filteredBooks = books.filter { book ->
+                        val filteredBooks = libraryBooks.filter { book ->
                             searchQuery.isBlank() ||
                                 book.title.contains(searchQuery, ignoreCase = true) ||
                                 book.author.contains(searchQuery, ignoreCase = true)
@@ -352,6 +442,7 @@ fun BookItemCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -367,13 +458,15 @@ fun BookItemCard(
                 error = painterResource(id = R.drawable.ic_book_placeholder),
                 fallback = painterResource(id = R.drawable.ic_book_placeholder),
                 modifier = Modifier
-                    .size(60.dp)
-                    .padding(end = 12.dp),
+                    .size(width = 62.dp, height = 82.dp)
+                    .clip(MaterialTheme.shapes.small),
                 contentScale = ContentScale.Crop
             )
 
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp)
             ) {
                 Text(
                     text = book.title.ifBlank { "Untitled" },

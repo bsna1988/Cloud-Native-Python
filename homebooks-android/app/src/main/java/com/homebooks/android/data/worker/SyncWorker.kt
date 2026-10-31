@@ -73,17 +73,23 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         }
 
         try {
-            val jsonObject = JSONObject(mutation.payloadJson).apply {
-                put("idempotency_key", book.uuid)
-            }
-            val jsonBody = jsonObject.toString().toRequestBody("application/json".toMediaType())
-
             val localPathsType = object : TypeToken<List<String>>() {}.type
             val localPaths: List<String> = try {
                 gson.fromJson(mutation.localImagePathsJson, localPathsType)
             } catch (_: Exception) {
                 emptyList()
             }
+
+            val remoteUrls = localPaths.filter { it.startsWith("http://") || it.startsWith("https://") }
+            val jsonObject = JSONObject(mutation.payloadJson).apply {
+                put("idempotency_key", book.uuid)
+                if (remoteUrls.isNotEmpty()) {
+                    val jsonArray = org.json.JSONArray()
+                    remoteUrls.forEach { jsonArray.put(it) }
+                    put("image_urls", jsonArray)
+                }
+            }
+            val jsonBody = jsonObject.toString().toRequestBody("application/json".toMediaType())
 
             val imageParts = localPaths.mapNotNull { path ->
                 val file = File(path)
@@ -134,7 +140,21 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         }
 
         try {
-            val jsonObject = JSONObject(mutation.payloadJson)
+            val localPathsType = object : TypeToken<List<String>>() {}.type
+            val localPaths: List<String> = try {
+                gson.fromJson(mutation.localImagePathsJson, localPathsType)
+            } catch (_: Exception) {
+                emptyList()
+            }
+
+            val remoteUrls = localPaths.filter { it.startsWith("http://") || it.startsWith("https://") }
+            val jsonObject = JSONObject(mutation.payloadJson).apply {
+                if (remoteUrls.isNotEmpty()) {
+                    val jsonArray = org.json.JSONArray()
+                    remoteUrls.forEach { jsonArray.put(it) }
+                    put("image_urls", jsonArray)
+                }
+            }
             val jsonBody = jsonObject.toString().toRequestBody("application/json".toMediaType())
 
             val removedImagesType = object : TypeToken<List<String>>() {}.type
@@ -144,13 +164,6 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
                 emptyList()
             }
             val removedImagesJsonBody = gson.toJson(removedImages).toRequestBody("application/json".toMediaType())
-
-            val localPathsType = object : TypeToken<List<String>>() {}.type
-            val localPaths: List<String> = try {
-                gson.fromJson(mutation.localImagePathsJson, localPathsType)
-            } catch (_: Exception) {
-                emptyList()
-            }
 
             val imageParts = localPaths.mapNotNull { path ->
                 val file = File(path)

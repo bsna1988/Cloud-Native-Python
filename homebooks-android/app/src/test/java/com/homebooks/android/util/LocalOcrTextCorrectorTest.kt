@@ -28,4 +28,36 @@ class LocalOcrTextCorrectorTest {
             LocalOcrTextCorrector.correct("Burston/Harchy")
         )
     }
+
+    @Test
+    fun aggressiveModeCorrectsWordsWithThreeEditsAndPreservesFormatting() {
+        assertEquals(
+            "MAGIQUES!",
+            LocalOcrTextCorrector.correctAggressively("MABIQVESS!")
+        )
+    }
+
+    @Test
+    fun conservativeModeStillLeavesThreeEditWordsUnchanged() {
+        assertEquals(
+            "MABIQVESS",
+            LocalOcrTextCorrector.correct("MABIQVESS")
+        )
+    }
+
+    @Test
+    fun aggressiveModeKeepsKnownAndUnsupportedNames() {
+        assertEquals(
+            "Burston/Harchy Xylqor",
+            LocalOcrTextCorrector.correctAggressively("Burston/Harchy Xylqor")
+        )
+    }
+
+    @Test
+    fun aggressiveModeRestoresKnownFrenchAccents() {
+        assertEquals(
+            "FANTÔMES",
+            LocalOcrTextCorrector.correctAggressively("FANTÖMES")
+        )
+    }
 }

@@ -24,7 +24,8 @@ data class RecognizedBook(
     val author: String? = null,
     val barcode: String? = null,
     val release_date: String? = null,
-    val description: String? = null
+    val description: String? = null,
+    val thumbnail: String? = null
 )
 
 data class RecognitionResponse(
@@ -39,6 +40,7 @@ data class BookMetadataCandidate(
     val barcode: String? = null,
     val releaseDate: String? = null,
     val description: String? = null,
+    val thumbnail: String? = null,
     val source: String
 )
 
@@ -71,5 +73,7 @@ fun Book.withMetadataCandidate(candidate: BookMetadataCandidate): Book = copy(
     author = candidate.author?.takeIf(String::isNotBlank) ?: author,
     barcode = candidate.barcode?.takeIf(String::isNotBlank) ?: barcode,
     release_date = candidate.releaseDate?.takeIf(String::isNotBlank) ?: release_date,
-    description = candidate.description?.takeIf(String::isNotBlank) ?: description
+    description = candidate.description?.takeIf(String::isNotBlank) ?: description,
+    thumbnail = candidate.thumbnail?.takeIf(String::isNotBlank) ?: thumbnail,
+    images = if (!candidate.thumbnail.isNullOrBlank() && !images.contains(candidate.thumbnail)) images + candidate.thumbnail else images
 )

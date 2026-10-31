@@ -13,34 +13,38 @@ internal object LocalOcrTextCorrector {
     private val lexicons = mapOf(
         "fr" to words(
             """
-            a atlas aux avait avoir barbara beethoven bien cent chef classe comptines
-            comptine conjugaison construire contes correspondance cuisine dans de des
-            deux dix donc du enfants encyclopédie écheveau faciles faire feu fleur
-            français femmes geoffroy gourmets guerre guerres guide harchy hommes journal jeux
-            je lieues lettres le les leur livre magique magiques magie mondial monde
-            moufle mille mers mes mentent mondiale mots nouvel noir origami origamis
-            paix peur petit petits piano pièces progressive pourquoi préférées
-            pleurent qui recettes réponses rêvaient réussir sais sans simplissime sous
-            questions tanks to véhicules vingt vaisseau vampire voler guerres et au
+            a atlas au aux avait avoir barbara beethoven bien cent chef classe comptines
+            comptine conjugaison construire contes correspondance cuisine dans de des deux
+            dix donc du enfants encyclopédie écheveau faciles faire feu fleur français
+            femmes fantômes geoffroy gourmets guerre guerres guide harchy hommes journal jeux
+            je lieues lettres le les leur livre magique magiques magie mondial monde moufle
+            mille mers mes mentent mondiale mots nouvel noir origami origamis paix peur
+            petit petite petits piano pièces planète pleurent pourquoi préférées progressive
+            qui recettes réponses rêvaient réussir sais sans simplissime sous questions tanks
+            to véhicules vingt vaisseau vampire voler et en
+            beaucoup cette chaque comme édition erreur livre livres nouveau ouvrage par pays
+            plus pour roman texte titre tous très une avec votre
             """
         ),
         "en" to words(
             """
             all and atlas barbara beethoven book building class children fighting
             guide harchy journal letters lieues magic modern noob pease pirates
-            recipes tanks the to vehicles world
+            recipes tanks the to vehicles world about after because between books
+            correct description edition error from have language many more novel title
+            words
             """
         ),
         "uk" to words(
             """
-            uk клас міркувань планета
+            uk клас міркувань планета читання книжка назва автор помилки
             """
         )
     )
     private val dictionaries = lexicons.mapValues { (_, entries) ->
         val canonicalWords = entries.values.toSet()
         val spellChecker = SymSpellBuilder()
-            .setMaxDictionaryEditDistance(MAX_EDIT_DISTANCE)
+            .setMaxDictionaryEditDistance(MAX_AGGRESSIVE_EDIT_DISTANCE)
             .setUnigramLexicon(canonicalWords.associate { normalize(it) to DEFAULT_FREQUENCY })
             .createSymSpell()
         SpellDictionary(
@@ -49,13 +53,27 @@ internal object LocalOcrTextCorrector {
         )
     }
 
-    fun correct(text: String): String = wordPattern.replace(text) { match ->
+    fun correct(text: String): String = correct(text, CONSERVATIVE_EDIT_DISTANCE)
+
+    fun correctAggressively(text: String): String = correct(text, MAX_AGGRESSIVE_EDIT_DISTANCE)
+
+    private fun correct(text: String, maxEditDistance: Int): String =
+        wordPattern.replace(text) { match ->
         val source = match.value
         val normalized = normalize(source)
-        if (normalized.length < MIN_WORD_LENGTH ||
-            dictionaries.values.any { normalized in it.canonicalWords }
-        ) {
+        if (normalized.length < MIN_WORD_LENGTH) {
             return@replace source
+        }
+        val knownWords = dictionaries.values.mapNotNull { it.canonicalWords[normalized] }
+            .distinctBy { it.lowercase(Locale.ROOT) }
+        if (knownWords.isNotEmpty()) {
+            if (maxEditDistance <= CONSERVATIVE_EDIT_DISTANCE ||
+                knownWords.size != 1 ||
+                source.equals(knownWords.single(), ignoreCase = true)
+            ) {
+                return@replace source
+            }
+            return@replace preserveCase(source, knownWords.single())
         }
 
         val suggestionsByWord = dictionaries.values
@@ -68,7 +86,7 @@ internal object LocalOcrTextCorrector {
                         canonical to suggestion.editDistance
                     }
             }
-            .filter { (_, distance) -> distance in 1..MAX_EDIT_DISTANCE }
+            .filter { (_, distance) -> distance in 1..MAX_AGGRESSIVE_EDIT_DISTANCE }
             .groupBy({ (word, _) -> normalize(word) }, { (_, distance) -> distance })
 
         if (suggestionsByWord.size != 1) {
@@ -76,7 +94,9 @@ internal object LocalOcrTextCorrector {
         }
 
         val (corrected, distances) = suggestionsByWord.entries.single()
-        if (distances.minOrNull() != 1) return@replace source
+        if ((distances.minOrNull() ?: return@replace source) > maxEditDistance) {
+            return@replace source
+        }
         val canonical = dictionaries.values
             .firstNotNullOfOrNull { it.canonicalWords[corrected] }
             ?: return@replace source
@@ -106,6 +126,7 @@ internal object LocalOcrTextCorrector {
     )
 
     private const val MIN_WORD_LENGTH = 5
-    private const val MAX_EDIT_DISTANCE = 1
+    private const val CONSERVATIVE_EDIT_DISTANCE = 1
+    private const val MAX_AGGRESSIVE_EDIT_DISTANCE = 3
     private const val DEFAULT_FREQUENCY = 1L
 }

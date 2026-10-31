@@ -20,7 +20,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
+import com.homebooks.android.data.model.BookMetadataCandidate
+import com.homebooks.android.util.LocalOcrTextCorrector
 import com.homebooks.android.ui.viewmodel.BooksViewModel
+import com.homebooks.android.ui.viewmodel.UiState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,7 +53,11 @@ fun EditBookScreen(
 
     var cameraFile by remember { mutableStateOf<File?>(null) }
     val errorMessage by viewModel.error.observeAsState(null)
+    val metadataCandidatesState by viewModel.metadataCandidatesState.observeAsState(UiState.Idle)
     val snackbarHostState = remember { SnackbarHostState() }
+    val screenScope = rememberCoroutineScope()
+    var isCorrectingText by remember { mutableStateOf(false) }
+    var selectedCandidateThumbnail by remember(bookId) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(bookId) {
         viewModel.loadBook(bookId)
@@ -283,6 +293,128 @@ fun EditBookScreen(
                     minLines = 3
                 )
 
+                OutlinedButton(
+                    onClick = {
+                        val currentBook = book ?: return@OutlinedButton
+                        viewModel.searchMetadataCandidates(
+                            currentBook.copy(
+                                title = title,
+                                author = author,
+                                barcode = barcode.takeIf(String::isNotBlank)
+                            )
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = metadataCandidatesState !is UiState.Loading &&
+                        !isCorrectingText &&
+                        (title.isNotBlank() || author.isNotBlank() || barcode.isNotBlank())
+                ) {
+                    if (metadataCandidatesState is UiState.Loading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Searching catalogs…")
+                    } else {
+                        Text("Search book catalogs")
+                    }
+                }
+
+                when (val state = metadataCandidatesState) {
+                    is UiState.Error -> {
+                        Text(
+                            text = "Catalog lookup failed: ${state.message}",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    is UiState.Success<*> -> {
+                        val candidates = (state.data as? List<*>)
+                            ?.filterIsInstance<BookMetadataCandidate>()
+                            .orEmpty()
+                        if (candidates.isEmpty()) {
+                            Text(
+                                "No catalog matches found.",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        } else {
+                            Text(
+                                "Choose a match to fill the form. Review the details before saving.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            candidates.forEach { candidate ->
+                                MetadataCandidateCard(candidate) {
+                                    title = candidate.title
+                                    candidate.author?.takeIf(String::isNotBlank)?.let { author = it }
+                                    candidate.barcode?.takeIf(String::isNotBlank)?.let { barcode = it }
+                                    candidate.releaseDate?.takeIf(String::isNotBlank)?.let { releaseDate = it }
+                                    candidate.description?.takeIf(String::isNotBlank)?.let { description = it }
+                                    selectedCandidateThumbnail = candidate.thumbnail
+                                }
+                            }
+                        }
+                    }
+                    else -> Unit
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        screenScope.launch {
+                            isCorrectingText = true
+                            try {
+                                val currentTitle = title
+                                val currentAuthor = author
+                                val currentDescription = description
+                                val correctedFields = withContext(Dispatchers.Default) {
+                                    Triple(
+                                        LocalOcrTextCorrector.correctAggressively(currentTitle),
+                                        LocalOcrTextCorrector.correctAggressively(currentAuthor),
+                                        LocalOcrTextCorrector.correctAggressively(currentDescription)
+                                    )
+                                }
+                                val changedFieldCount = listOf(
+                                    currentTitle != correctedFields.first,
+                                    currentAuthor != correctedFields.second,
+                                    currentDescription != correctedFields.third
+                                ).count { it }
+                                title = correctedFields.first
+                                author = correctedFields.second
+                                description = correctedFields.third
+                                val message = if (changedFieldCount == 0) {
+                                    "No spelling corrections found."
+                                } else {
+                                    val fieldLabel = if (changedFieldCount == 1) "field" else "fields"
+                                    "Corrected $changedFieldCount text $fieldLabel. Review before saving."
+                                }
+                                snackbarHostState.showSnackbar(message)
+                            } finally {
+                                isCorrectingText = false
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isCorrectingText &&
+                        (title.isNotBlank() || author.isNotBlank() || description.isNotBlank())
+                ) {
+                    if (isCorrectingText) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Correcting text…")
+                    } else {
+                        Text("Aggressively fix spelling mistakes")
+                    }
+                }
+                Text(
+                    "Applies local corrections to title, author, and description. Review them before saving.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
                 Button(
                     onClick = {
                         if (title.isNotBlank() && author.isNotBlank()) {
@@ -294,17 +426,53 @@ fun EditBookScreen(
                                 releaseDate = releaseDate,
                                 description = description,
                                 imageFiles = newFiles,
-                                removedImages = removedImages
+                                removedImages = removedImages,
+                                remoteImageUrls = listOfNotNull(selectedCandidateThumbnail)
                             ) {
                                 onBookUpdated()
                             }
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = title.isNotBlank() && author.isNotBlank()
+                    enabled = !isCorrectingText && title.isNotBlank() && author.isNotBlank()
                 ) {
                     Text("Save Changes")
                 }
+            }
+        }
+
+    }
+}
+
+@Composable
+private fun MetadataCandidateCard(
+    candidate: BookMetadataCandidate,
+    onUseCandidate: () -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(candidate.title, style = MaterialTheme.typography.titleMedium)
+            candidate.author?.takeIf(String::isNotBlank)?.let {
+                Text("Author: $it", style = MaterialTheme.typography.bodyMedium)
+            }
+            candidate.releaseDate?.takeIf(String::isNotBlank)?.let {
+                Text("Published: $it", style = MaterialTheme.typography.bodySmall)
+            }
+            candidate.barcode?.takeIf(String::isNotBlank)?.let {
+                Text("ISBN: $it", style = MaterialTheme.typography.bodySmall)
+            }
+            Text(
+                text = candidate.source,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            TextButton(onClick = onUseCandidate) {
+                Text("Use this match")
             }
         }
     }

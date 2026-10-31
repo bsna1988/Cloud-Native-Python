@@ -1,9 +1,22 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose") version "2.0.20"
     id("com.google.devtools.ksp") version "2.0.20-1.0.24"
 }
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use { load(it) }
+    }
+}
+val googleBooksApiKey = providers.gradleProperty("googleBooksApiKey").orNull
+    ?: providers.environmentVariable("GOOGLE_BOOKS_API_KEY").orNull
+    ?: localProperties.getProperty("googleBooksApiKey")
+    ?: ""
 
 android {
     namespace = "com.homebooks.android"
@@ -17,6 +30,11 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField(
+            "String",
+            "GOOGLE_BOOKS_API_KEY",
+            "\"${googleBooksApiKey.replace("\\", "\\\\").replace("\"", "\\\"")}\""
+        )
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -40,6 +58,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources {

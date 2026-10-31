@@ -9,7 +9,6 @@ import androidx.lifecycle.viewModelScope
 import com.homebooks.android.data.model.Book
 import com.homebooks.android.data.model.BookMetadataCandidate
 import com.homebooks.android.data.model.RecognizedBook
-import com.homebooks.android.data.model.isMetadataIncomplete
 import com.homebooks.android.data.repository.BooksRepository
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
@@ -59,7 +58,6 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
     private val _metadataCandidatesState = MutableLiveData<UiState>(UiState.Idle)
     val metadataCandidatesState: LiveData<UiState> get() = _metadataCandidatesState
     private var metadataLookupJob: Job? = null
-    private var metadataLookupKey: String? = null
 
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> get() = _error
@@ -184,37 +182,27 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun loadBook(id: Int) {
+        metadataLookupJob?.cancel()
+        metadataLookupJob = null
+        _metadataCandidatesState.value = UiState.Idle
         viewModelScope.launch {
             val result = _repository.getBook(id)
             result.onSuccess { book ->
                 _selectedBook.value = book
-                loadMetadataCandidates(book)
             }.onFailure { exception ->
                 _error.value = exception.message ?: "Failed to load book"
             }
         }
     }
 
-    fun loadMetadataCandidates(book: Book) {
-        if (!book.isMetadataIncomplete()) {
-            metadataLookupJob?.cancel()
-            metadataLookupJob = null
-            metadataLookupKey = null
-            _metadataCandidatesState.value = UiState.Idle
+    fun searchMetadataCandidates(book: Book) {
+        if (book.title.isBlank() && book.author.isBlank() && book.barcode.isNullOrBlank()) {
+            _metadataCandidatesState.value = UiState.Error(
+                "Enter a title, author, or barcode before searching."
+            )
             return
         }
 
-        val lookupKey = listOf(
-            book.id,
-            book.title,
-            book.author,
-            book.barcode,
-            book.release_date,
-            book.description
-        ).joinToString("|")
-        if (metadataLookupKey == lookupKey) return
-
-        metadataLookupKey = lookupKey
         metadataLookupJob?.cancel()
         _metadataCandidatesState.value = UiState.Loading
         metadataLookupJob = viewModelScope.launch {
@@ -227,6 +215,7 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
                         exception.message ?: "Metadata lookup failed"
                     )
                 }
+            metadataLookupJob = null
         }
     }
 
@@ -237,7 +226,6 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
                 .onSuccess { updatedBook ->
                     _selectedBook.value = updatedBook
                     _metadataCandidatesState.value = UiState.Idle
-                    metadataLookupKey = null
                 }
                 .onFailure { exception ->
                     val message = exception.message ?: "Failed to apply metadata"
@@ -331,10 +319,21 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
         description: String,
         imageFiles: List<File>,
         removedImages: List<String>,
+        remoteImageUrls: List<String> = emptyList(),
         onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
-            val result = _repository.updateBook(id, title, author, barcode, releaseDate, description, imageFiles, removedImages)
+            val result = _repository.updateBook(
+                id,
+                title,
+                author,
+                barcode,
+                releaseDate,
+                description,
+                imageFiles,
+                removedImages,
+                remoteImageUrls
+            )
             result.onSuccess { book ->
                 _selectedBook.value = book
                 onSuccess()

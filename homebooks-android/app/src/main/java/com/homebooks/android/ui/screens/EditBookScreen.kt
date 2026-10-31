@@ -10,7 +10,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -62,7 +61,6 @@ fun EditBookScreen(
     val screenScope = rememberCoroutineScope()
     var isCorrectingText by remember { mutableStateOf(false) }
     var selectedCandidateThumbnail by remember(bookId) { mutableStateOf<String?>(null) }
-    var showRemoveConfirmation by remember { mutableStateOf(false) }
 
     LaunchedEffect(bookId) {
         viewModel.loadBook(bookId)
@@ -481,49 +479,9 @@ fun EditBookScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Button(
-                    onClick = { showRemoveConfirmation = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    )
-                ) {
-                    Icon(Icons.Default.Delete, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Remove Book")
-                }
             }
         }
 
-    }
-
-    if (showRemoveConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showRemoveConfirmation = false },
-            title = { Text("Remove Book") },
-            text = {
-                Text("Are you sure you want to remove \"${book?.title.orEmpty()}\"? This action cannot be undone.")
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showRemoveConfirmation = false
-                        viewModel.deleteBook(bookId, onSuccess = onBookUpdated)
-                    },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("Remove")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRemoveConfirmation = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
     }
 }
 

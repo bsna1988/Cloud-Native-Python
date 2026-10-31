@@ -111,6 +111,12 @@ class MainActivity : ComponentActivity() {
                                 bookId = bookId,
                                 viewModel = viewModel,
                                 onBookUpdated = { navController.popBackStack() },
+                                onBookDeleted = {
+                                    navController.popBackStack(
+                                        route = "book_list",
+                                        inclusive = false
+                                    )
+                                },
                                 onBackClick = { navController.popBackStack() }
                             )
                         }

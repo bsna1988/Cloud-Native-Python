@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,7 +29,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
-import kotlinx.coroutines.launch
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -45,16 +43,15 @@ fun BookListScreen(
     val context = LocalContext.current
     val booksState by viewModel.booksState.observeAsState(UiState.Loading)
     val errorMessage by viewModel.error.observeAsState(null)
+    val bookDeletedMessage by viewModel.bookDeletedMessage.observeAsState(null)
     val pendingCount by viewModel.pendingCount.observeAsState(0)
     val snackbarHostState = remember { SnackbarHostState() }
-    val screenScope = rememberCoroutineScope()
     val libraryBooks = when (val state = booksState) {
         is UiState.Success<*> -> (state.data as? List<*>)?.filterIsInstance<Book>().orEmpty()
         else -> emptyList()
     }
     var searchQuery by remember { mutableStateOf("") }
     var showScanShelfDialog by remember { mutableStateOf(false) }
-    var bookToRemove by remember { mutableStateOf<Book?>(null) }
     var cameraFilePath by rememberSaveable { mutableStateOf<String?>(null) }
 
     val cameraLauncher = rememberLauncherForActivityResult(
@@ -145,42 +142,15 @@ fun BookListScreen(
         )
     }
 
-    bookToRemove?.let { book ->
-        AlertDialog(
-            onDismissRequest = { bookToRemove = null },
-            title = { Text("Remove Book") },
-            text = {
-                Text("Are you sure you want to remove \"${book.title}\"? This action cannot be undone.")
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        book.id?.let { bookId ->
-                            viewModel.deleteBook(bookId) {
-                                screenScope.launch {
-                                    snackbarHostState.showSnackbar("Book deleted")
-                                }
-                            }
-                        }
-                        bookToRemove = null
-                    },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("Remove")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { bookToRemove = null }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
     LaunchedEffect(Unit) {
         viewModel.loadBooks()
+    }
+
+    LaunchedEffect(bookDeletedMessage) {
+        bookDeletedMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearBookDeletedMessage()
+        }
     }
 
     Scaffold(
@@ -354,8 +324,6 @@ fun BookListScreen(
                                 items(filteredBooks, key = { it.id ?: it.hashCode() }) { book ->
                                     BookItemCard(book = book, onClick = {
                                         book.id?.let { onBookClick(it) }
-                                    }, onRemove = {
-                                        bookToRemove = book
                                     })
                                 }
                             }
@@ -405,11 +373,12 @@ fun BookListScreen(
 @Composable
 fun BookItemCard(
     book: Book,
-    onClick: () -> Unit,
-    onRemove: () -> Unit
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -419,56 +388,41 @@ fun BookItemCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
+            AsyncImage(
+                model = book.thumbnail,
+                contentDescription = book.title,
+                placeholder = painterResource(id = R.drawable.ic_book_placeholder),
+                error = painterResource(id = R.drawable.ic_book_placeholder),
+                fallback = painterResource(id = R.drawable.ic_book_placeholder),
+                modifier = Modifier
+                    .size(width = 62.dp, height = 82.dp)
+                    .clip(MaterialTheme.shapes.small),
+                contentScale = ContentScale.Crop
+            )
+
+            Column(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(MaterialTheme.shapes.medium)
-                    .clickable(onClick = onClick),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(start = 12.dp)
             ) {
-                AsyncImage(
-                    model = book.thumbnail,
-                    contentDescription = book.title,
-                    placeholder = painterResource(id = R.drawable.ic_book_placeholder),
-                    error = painterResource(id = R.drawable.ic_book_placeholder),
-                    fallback = painterResource(id = R.drawable.ic_book_placeholder),
-                    modifier = Modifier
-                        .size(width = 62.dp, height = 82.dp)
-                        .clip(MaterialTheme.shapes.small),
-                    contentScale = ContentScale.Crop
+                Text(
+                    text = book.title.ifBlank { "Untitled" },
+                    style = MaterialTheme.typography.titleMedium
                 )
-
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 12.dp)
-                ) {
-                    Text(
-                        text = book.title.ifBlank { "Untitled" },
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = book.author.ifBlank { "Unknown Author" },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (book.release_date.isNotBlank()) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = book.author.ifBlank { "Unknown Author" },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "Released: ${book.release_date}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
                     )
-                    if (book.release_date.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Released: ${book.release_date}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.outline
-                        )
-                    }
                 }
-            }
-            IconButton(onClick = onRemove) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Remove ${book.title}",
-                    tint = MaterialTheme.colorScheme.error
-                )
             }
         }
     }

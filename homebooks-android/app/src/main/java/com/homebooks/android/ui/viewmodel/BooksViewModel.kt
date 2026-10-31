@@ -62,6 +62,9 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
     private val _error = MutableLiveData<String?>()
     val error: LiveData<String?> get() = _error
 
+    private val _bookDeletedMessage = MutableLiveData<String?>()
+    val bookDeletedMessage: LiveData<String?> get() = _bookDeletedMessage
+
     private val _recognitionState = MutableLiveData<UiState>()
     val recognitionState: LiveData<UiState> get() = _recognitionState
 
@@ -310,11 +313,18 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteBook(id: Int, onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             val result = _repository.deleteBook(id)
-            result.onSuccess { onSuccess() }
+            result.onSuccess {
+                _bookDeletedMessage.value = "Book deleted"
+                onSuccess()
+            }
             result.onFailure { exception ->
                 _error.value = exception.message ?: "Failed to delete book"
             }
         }
+    }
+
+    fun clearBookDeletedMessage() {
+        _bookDeletedMessage.value = null
     }
 
     fun updateBook(

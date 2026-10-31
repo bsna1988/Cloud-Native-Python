@@ -255,7 +255,7 @@ fun BookListScreen(
                     onClick = { showScanShelfDialog = true },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Scan bookshelf", maxLines = 1)
+                    Text("Scan shelf", maxLines = 1)
                 }
                 OutlinedButton(
                     onClick = onBulkScanClick,

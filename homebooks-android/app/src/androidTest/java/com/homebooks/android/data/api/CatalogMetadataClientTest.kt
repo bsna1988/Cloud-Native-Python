@@ -34,12 +34,13 @@ class CatalogMetadataClientTest {
                         """
                             {"items":[{"volumeInfo":{"title":"Google title","authors":["Google author"],
                               "publishedDate":"2001","description":"A description",
-                              "industryIdentifiers":[{"type":"ISBN_13","identifier":"9781234567890"}]}}]}
+                              "industryIdentifiers":[{"type":"ISBN_13","identifier":"9781234567890"}],
+                              "imageLinks":{"thumbnail":"http://books.google.com/cover.jpg"}}}]}
                         """.trimIndent()
                     }
                     "openlibrary.org" -> """
                         {"docs":[{"title":"Another title","author_name":["Other author"],
-                          "first_publish_year":1998,"isbn":["0123456789"]}]}
+                          "first_publish_year":1998,"isbn":["0123456789"],"cover_i":12345}]}
                     """.trimIndent()
                     else -> error("Unexpected catalog host ${request.url.host}")
                 }
@@ -71,11 +72,13 @@ class CatalogMetadataClientTest {
         assertEquals("Google author", candidates[0].author)
         assertEquals("9781234567890", candidates[0].barcode)
         assertEquals("2001", candidates[0].releaseDate)
+        assertEquals("https://books.google.com/cover.jpg", candidates[0].thumbnail)
         assertEquals("Google Books", candidates[0].source)
         assertEquals("Another title", candidates[1].title)
         assertEquals("Other author", candidates[1].author)
         assertEquals("0123456789", candidates[1].barcode)
         assertEquals("1998", candidates[1].releaseDate)
+        assertEquals("https://covers.openlibrary.org/b/id/12345-L.jpg", candidates[1].thumbnail)
         assertEquals("Open Library", candidates[1].source)
     }
 

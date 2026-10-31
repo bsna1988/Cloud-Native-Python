@@ -15,11 +15,14 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
+import com.homebooks.android.R
 import com.homebooks.android.data.model.BookMetadataCandidate
 import com.homebooks.android.util.LocalOcrTextCorrector
 import com.homebooks.android.ui.viewmodel.BooksViewModel
@@ -456,29 +459,47 @@ private fun MetadataCandidateCard(
     onUseCandidate: () -> Unit
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(candidate.title, style = MaterialTheme.typography.titleMedium)
-            candidate.author?.takeIf(String::isNotBlank)?.let {
-                Text("Author: $it", style = MaterialTheme.typography.bodyMedium)
-            }
-            candidate.releaseDate?.takeIf(String::isNotBlank)?.let {
-                Text("Published: $it", style = MaterialTheme.typography.bodySmall)
-            }
-            candidate.barcode?.takeIf(String::isNotBlank)?.let {
-                Text("ISBN: $it", style = MaterialTheme.typography.bodySmall)
-            }
-            Text(
-                text = candidate.source,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            AsyncImage(
+                model = candidate.thumbnail,
+                contentDescription = "Cover of ${candidate.title}",
+                placeholder = painterResource(id = R.drawable.ic_book_placeholder),
+                error = painterResource(id = R.drawable.ic_book_placeholder),
+                fallback = painterResource(id = R.drawable.ic_book_placeholder),
+                modifier = Modifier
+                    .width(72.dp)
+                    .height(104.dp)
+                    .clip(MaterialTheme.shapes.small),
+                contentScale = ContentScale.Crop
             )
-            TextButton(onClick = onUseCandidate) {
-                Text("Use this match")
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(candidate.title, style = MaterialTheme.typography.titleMedium)
+                candidate.author?.takeIf(String::isNotBlank)?.let {
+                    Text("Author: $it", style = MaterialTheme.typography.bodyMedium)
+                }
+                candidate.releaseDate?.takeIf(String::isNotBlank)?.let {
+                    Text("Published: $it", style = MaterialTheme.typography.bodySmall)
+                }
+                candidate.barcode?.takeIf(String::isNotBlank)?.let {
+                    Text("ISBN: $it", style = MaterialTheme.typography.bodySmall)
+                }
+                Text(
+                    text = candidate.source,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                TextButton(onClick = onUseCandidate) {
+                    Text("Use this match")
+                }
             }
         }
     }

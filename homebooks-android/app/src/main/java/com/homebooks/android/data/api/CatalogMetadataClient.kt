@@ -107,7 +107,8 @@ class CatalogMetadataClient(
             val identifiers = info.optJSONArray("industryIdentifiers")
             val imageLinks = info.optJSONObject("imageLinks")
             val rawThumbnail = imageLinks?.optString("thumbnail")
-                ?: imageLinks?.optString("smallThumbnail")
+                ?.takeIf(String::isNotBlank)
+                ?: imageLinks?.optString("smallThumbnail")?.takeIf(String::isNotBlank)
             val cleanThumbnail = rawThumbnail?.replace("http://", "https://")
 
             BookMetadataCandidate(

@@ -352,6 +352,12 @@ fun EditBookScreen(
                                     candidate.releaseDate?.takeIf(String::isNotBlank)?.let { releaseDate = it }
                                     candidate.description?.takeIf(String::isNotBlank)?.let { description = it }
                                     selectedCandidateThumbnail = candidate.thumbnail
+                                    viewModel.clearMetadataCandidates()
+                                    screenScope.launch {
+                                        snackbarHostState.showSnackbar(
+                                            "Candidate details applied. Save changes to update the book."
+                                        )
+                                    }
                                 }
                             }
                         }

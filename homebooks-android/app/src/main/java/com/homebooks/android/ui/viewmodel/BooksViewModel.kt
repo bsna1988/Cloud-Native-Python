@@ -219,6 +219,12 @@ class BooksViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun clearMetadataCandidates() {
+        metadataLookupJob?.cancel()
+        metadataLookupJob = null
+        _metadataCandidatesState.value = UiState.Idle
+    }
+
     fun acceptMetadataCandidate(book: Book, candidate: BookMetadataCandidate) {
         _metadataCandidatesState.value = UiState.Loading
         viewModelScope.launch {
